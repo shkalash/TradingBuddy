@@ -1,8 +1,16 @@
 import SwiftUI
 import Observation
 
+/// Manages the persistence and retrieval of UI colors associated with tag categories.
+///
+/// **Responsibilities:**
+/// - Providing default colors for each `TagType`.
+/// - Persisting user-defined color overrides in isolated `UserDefaults`.
+/// - Converting between SwiftUI `Color` and hexadecimal string representations.
 @Observable
 public class TagColorService {
+    // MARK: - Properties
+    
     private let defaults: UserDefaults
     private let colorsKey = "tagCategoryColors"
     
@@ -14,6 +22,8 @@ public class TagColorService {
         }
     }
     
+    // MARK: - Initialization
+    
     public init(defaults: UserDefaults = .init(suiteName: AppStoragePaths.userDefaultsSuiteName) ?? .standard) {
         self.defaults = defaults
         if let data = defaults.data(forKey: colorsKey),
@@ -21,6 +31,8 @@ public class TagColorService {
             self.colorMap = decoded
         }
     }
+    
+    // MARK: - Accessors
     
     public func getColor(for type: TagType) -> Color {
         let key = String(describing: type).lowercased()
@@ -41,7 +53,8 @@ public class TagColorService {
     }
 }
 
-// ... Color extension remains the same ...
+// MARK: - Color Hex Extensions
+
 extension Color {
     init?(hex: String) {
         var hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)

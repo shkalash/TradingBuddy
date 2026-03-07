@@ -1,6 +1,14 @@
 import Foundation
 
+/// A utility providing standardized file system paths for the application's storage needs.
+///
+/// **Responsibilities:**
+/// - Determining the base directory for app data (supporting Debug/Production isolation).
+/// - Providing unified paths for the SQLite database and image assets.
+/// - Defining suite names for isolated `UserDefaults` storage.
 public enum AppStoragePaths {
+    // MARK: - Directories
+    
     public static var baseDirectory: URL {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         
@@ -30,6 +38,8 @@ public enum AppStoragePaths {
         
         return imagesURL
     }
+    
+    // MARK: - UserDefaults
     
     public static var userDefaultsSuiteName: String? {
         #if DEBUG

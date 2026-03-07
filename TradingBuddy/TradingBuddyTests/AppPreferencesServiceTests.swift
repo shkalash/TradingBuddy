@@ -4,18 +4,16 @@ import Foundation
 
 struct AppPreferencesServiceTests {
     
-    private var testDefaults: UserDefaults {
-        UserDefaults(suiteName: "io.shkalash.TradingBuddy.unit-tests")!
-    }
-    
-    init() {
-        // Wipe tests defaults before each test
-        testDefaults.removePersistentDomain(forName: "io.shkalash.TradingBuddy.unit-tests")
+    // Use a unique suite name for each test run to ensure absolute isolation
+    private func makeTestDefaults() -> UserDefaults {
+        let name = "io.shkalash.TradingBuddy.tests.\(UUID().uuidString)"
+        return UserDefaults(suiteName: name)!
     }
     
     @Test("Default values are correct")
     func testDefaultValues() {
-        let service = AppPreferencesService(defaults: testDefaults)
+        let defaults = makeTestDefaults()
+        let service = AppPreferencesService(defaults: defaults)
         
         #expect(service.showHistoryJumpWarning == true)
         #expect(service.rolloverPromptDelayHours == 2)
@@ -24,7 +22,8 @@ struct AppPreferencesServiceTests {
     
     @Test("Updating preferences persists correctly")
     func testPreferenceUpdates() {
-        let service = AppPreferencesService(defaults: testDefaults)
+        let defaults = makeTestDefaults()
+        let service = AppPreferencesService(defaults: defaults)
         
         service.showHistoryJumpWarning = false
         service.rolloverPromptDelayHours = 5
@@ -32,8 +31,8 @@ struct AppPreferencesServiceTests {
         let futureDate = Date().addingTimeInterval(3600)
         service.snoozedUntil = futureDate
         
-        // Create a new instance to verify persistence in UserDefaults
-        let newService = AppPreferencesService(defaults: testDefaults)
+        // Re-initialize with same defaults to verify persistence
+        let newService = AppPreferencesService(defaults: defaults)
         
         #expect(newService.showHistoryJumpWarning == false)
         #expect(newService.rolloverPromptDelayHours == 5)

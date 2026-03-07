@@ -1,164 +1,148 @@
 import SwiftUI
 
-struct HistoryYear: Identifiable {
-    let id: Int
-    let months: [HistoryMonth]
-}
-
-struct HistoryMonth: Identifiable {
-    let id: String
-    let title: String
-    let days: [Date]
-}
-
+/// The primary navigation sidebar for the application.
+///
+/// **Responsibilities:**
+/// - Providing a hierarchical navigation interface for trading days.
+/// - Displaying categorized tags for quick filtering.
+/// - Syncing with the global `AppRouter` to manage selection state.
 struct SidebarView: View {
-    let repository: JournalRepository
+    // MARK: - Properties
     
+    @State private var viewModel: SidebarViewModel
     @Environment(AppRouter.self) private var router
     @Environment(TagColorService.self) private var colorService
-    
-    @State private var currentMonthDays: [Date] = []
-    @State private var currentMonthTitle: String = ""
-    @State private var historyYears: [HistoryYear] = []
-    
-    @State private var futureTags: [Tag] = []
-    @State private var tickerTags: [Tag] = []
-    @State private var topicTags: [Tag] = []
     
     @State private var isCurrentMonthExpanded = true
     @State private var isHistoryExpanded = false
     @State private var expandedYears: [Int: Bool] = [:]
     @State private var expandedMonths: [String: Bool] = [:]
     
+    // MARK: - Initialization
+    
+    public init(repository: JournalRepository) {
+        self._viewModel = State(initialValue: SidebarViewModel(repository: repository))
+    }
+    
+    // MARK: - Body
+    
     var body: some View {
         @Bindable var bindableRouter = router
         
-        // Use the native macOS Vertical Split View!
         VSplitView {
-            // TOP PANEL
-            List(selection: $bindableRouter.selection) {
-                Section("Trading Days") {
-                    if !currentMonthDays.isEmpty {
-                        DisclosureGroup(isExpanded: $isCurrentMonthExpanded) {
-                            ForEach(currentMonthDays, id: \.self) { day in
-                                NavigationLink(value: NavigationSelection.day(day)) {
-                                    Label(day.formatted(.dateTime.weekday(.abbreviated).day()), systemImage: "calendar")
-                                }
-                            }
-                        } label: {
-                            ClickableDisclosureLabel(title: currentMonthTitle, isExpanded: $isCurrentMonthExpanded)
-                        }
-                    }
-                    
-                    if !historyYears.isEmpty {
-                        DisclosureGroup(isExpanded: $isHistoryExpanded) {
-                            ForEach(historyYears) { year in
-                                let yearBinding = Binding(
-                                    get: { expandedYears[year.id, default: false] },
-                                    set: { expandedYears[year.id] = $0 }
-                                )
-                                DisclosureGroup(isExpanded: yearBinding) {
-                                    ForEach(year.months) { month in
-                                        let monthBinding = Binding(
-                                            get: { expandedMonths[month.id, default: false] },
-                                            set: { expandedMonths[month.id] = $0 }
-                                        )
-                                        DisclosureGroup(isExpanded: monthBinding) {
-                                            ForEach(month.days, id: \.self) { day in
-                                                NavigationLink(value: NavigationSelection.day(day)) {
-                                                    Label(day.formatted(.dateTime.weekday(.abbreviated).day()), systemImage: "calendar")
-                                                }
-                                            }
-                                        } label: {
-                                            ClickableDisclosureLabel(title: month.title, isExpanded: monthBinding)
-                                        }
-                                    }
-                                } label: {
-                                    ClickableDisclosureLabel(title: String(year.id), isExpanded: yearBinding)
-                                }
-                            }
-                        } label: {
-                            ClickableDisclosureLabel(title: "History", isExpanded: $isHistoryExpanded)
-                        }
-                    }
-                }
-            }
-            .listStyle(.sidebar)
-            .frame(minHeight: 150) // Prevent squashing the top list
-            
-            // BOTTOM PANEL
-            List(selection: $bindableRouter.selection) {
-                TagSidebarSection(title: "Futures", tags: futureTags, icon: "chart.line.uptrend.xyaxis", color: colorService.getColor(for: .future))
-                TagSidebarSection(title: "Tickers", tags: tickerTags, icon: "building.columns.fill", color: colorService.getColor(for: .ticker))
-                TagSidebarSection(title: "Topics", tags: topicTags, icon: "number", color: colorService.getColor(for: .topic))
-            }
-            .listStyle(.sidebar)
-            .frame(minHeight: 100) // Prevent squashing the bottom list
+            dateSection(selection: $bindableRouter.selection)
+            tagSection(selection: $bindableRouter.selection)
         }
-        .task {
-            await fetchData()
-        }
+        .task { await viewModel.fetchData() }
         .onReceive(NotificationCenter.default.publisher(for: .databaseCleared)) { _ in
-            Task {
-                await fetchData()
-                if currentMonthDays.isEmpty && historyYears.isEmpty {
-                    router.selection = .day(Date())
-                }
-            }
+            handleDatabaseClear()
         }
         .onReceive(NotificationCenter.default.publisher(for: .databaseUpdated)) { _ in
-            Task {
-                await fetchData()
+            Task { await viewModel.fetchData() }
+        }
+    }
+    
+    // MARK: - Sections
+    
+    private func dateSection(selection: Binding<NavigationSelection?>) -> some View {
+        List(selection: selection) {
+            Section("Trading Days") {
+                currentMonthDisclosure
+                historyDisclosure
+            }
+        }
+        .listStyle(.sidebar)
+        .frame(minHeight: 150)
+    }
+    
+    private func tagSection(selection: Binding<NavigationSelection?>) -> some View {
+        List(selection: selection) {
+            TagSidebarSection(title: "Futures", tags: viewModel.futureTags, icon: "chart.line.uptrend.xyaxis", color: colorService.getColor(for: .future))
+            TagSidebarSection(title: "Tickers", tags: viewModel.tickerTags, icon: "building.columns.fill", color: colorService.getColor(for: .ticker))
+            TagSidebarSection(title: "Topics", tags: viewModel.topicTags, icon: "number", color: colorService.getColor(for: .topic))
+        }
+        .listStyle(.sidebar)
+        .frame(minHeight: 100)
+    }
+    
+    // MARK: - Disclosures
+    
+    private var currentMonthDisclosure: some View {
+        Group {
+            if !viewModel.currentMonthDays.isEmpty {
+                DisclosureGroup(isExpanded: $isCurrentMonthExpanded) {
+                    ForEach(viewModel.currentMonthDays, id: \.self) { day in
+                        NavigationLink(value: NavigationSelection.day(day)) {
+                            Label(day.formatted(.dateTime.weekday(.abbreviated).day()), systemImage: "calendar")
+                        }
+                    }
+                } label: {
+                    ClickableDisclosureLabel(title: viewModel.currentMonthTitle, isExpanded: $isCurrentMonthExpanded)
+                }
             }
         }
     }
     
-    // MARK: - Data Processing
-    private func fetchData() async {
-        let rawDays = (try? await repository.allTradingDays()) ?? []
-        buildTree(from: rawDays)
-        
-        let tags = (try? await repository.allTags()) ?? []
-        futureTags = tags.filter { $0.type == .future }
-        tickerTags = tags.filter { $0.type == .ticker }
-        topicTags = tags.filter { $0.type == .topic }
+    private var historyDisclosure: some View {
+        Group {
+            if !viewModel.historyYears.isEmpty {
+                DisclosureGroup(isExpanded: $isHistoryExpanded) {
+                    ForEach(viewModel.historyYears) { year in
+                        yearDisclosure(for: year)
+                    }
+                } label: {
+                    ClickableDisclosureLabel(title: "History", isExpanded: $isHistoryExpanded)
+                }
+            }
+        }
     }
     
-    private func buildTree(from days: [Date]) {
-        let calendar = Calendar.current
-        let today = Date()
-        let currentYear = calendar.component(.year, from: today)
-        let currentMonth = calendar.component(.month, from: today)
-        
-        var currentDays: [Date] = []
-        var historyDict: [Int: [Int: [Date]]] = [:]
-        
-        for day in days {
-            let y = calendar.component(.year, from: day)
-            let m = calendar.component(.month, from: day)
-            
-            if y == currentYear && m == currentMonth {
-                currentDays.append(day)
-            } else {
-                historyDict[y, default: [:]][m, default: []].append(day)
+    private func yearDisclosure(for year: HistoryYear) -> some View {
+        let yearBinding = Binding(
+            get: { expandedYears[year.id, default: false] },
+            set: { expandedYears[year.id] = $0 }
+        )
+        return DisclosureGroup(isExpanded: yearBinding) {
+            ForEach(year.months) { month in
+                monthDisclosure(for: month)
             }
+        } label: {
+            ClickableDisclosureLabel(title: String(year.id), isExpanded: yearBinding)
         }
-        
-        self.currentMonthDays = currentDays.sorted(by: >)
-        self.currentMonthTitle = "Current Month (\(calendar.monthSymbols[currentMonth - 1]))"
-        
-        var histYears: [HistoryYear] = []
-        for year in historyDict.keys.sorted(by: >) {
-            var histMonths: [HistoryMonth] = []
-            let monthsDict = historyDict[year]!
-            
-            for month in monthsDict.keys.sorted(by: >) {
-                let sortedDays = monthsDict[month]!.sorted(by: >)
-                let title = calendar.monthSymbols[month - 1]
-                histMonths.append(HistoryMonth(id: "\(year)-\(month)", title: title, days: sortedDays))
-            }
-            histYears.append(HistoryYear(id: year, months: histMonths))
-        }
-        self.historyYears = histYears
     }
+    
+    private func monthDisclosure(for month: HistoryMonth) -> some View {
+        let monthBinding = Binding(
+            get: { expandedMonths[month.id, default: false] },
+            set: { expandedMonths[month.id] = $0 }
+        )
+        return DisclosureGroup(isExpanded: monthBinding) {
+            ForEach(month.days, id: \.self) { day in
+                NavigationLink(value: NavigationSelection.day(day)) {
+                    Label(day.formatted(.dateTime.weekday(.abbreviated).day()), systemImage: "calendar")
+                }
+            }
+        } label: {
+            ClickableDisclosureLabel(title: month.title, isExpanded: monthBinding)
+        }
+    }
+    
+    // MARK: - Handlers
+    
+    private func handleDatabaseClear() {
+        Task {
+            await viewModel.fetchData()
+            if viewModel.currentMonthDays.isEmpty && viewModel.historyYears.isEmpty {
+                router.selection = .day(Date())
+            }
+        }
+    }
+}
+
+// MARK: - Previews
+
+#Preview {
+    SidebarView(repository: PreviewMocks.MockRepo())
+        .environment(AppRouter())
+        .environment(TagColorService())
 }

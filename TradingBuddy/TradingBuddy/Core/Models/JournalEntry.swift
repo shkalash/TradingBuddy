@@ -1,6 +1,11 @@
 import Foundation
 import GRDB
 
+/// A pure data model representing a single trading note or event.
+///
+/// **Responsibilities:**
+/// - Storing raw text, timestamps, and associated metadata.
+/// - Defining relationships to `Tag` objects for persistence.
 public struct JournalEntry: Codable, FetchableRecord, PersistableRecord, Identifiable, Hashable {
     public var id: String // UUID string
     public var text: String

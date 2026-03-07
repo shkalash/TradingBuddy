@@ -1,6 +1,13 @@
 import SwiftUI
 
+/// A settings tab for customizing the colors associated with different tag categories.
+///
+/// **Responsibilities:**
+/// - Organizing tag categories into an easy-to-read list.
+/// - Providing access to color pickers for each `TagType`.
 struct TagColorsTab: View {
+    // MARK: - Body
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             Text("Category Colors")

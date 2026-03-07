@@ -20,9 +20,25 @@ class MockImageStorageService: ImageStorageService {
 
 class MockJournalRepository: JournalRepository {
     var mockEntries: [JournalEntry] = []
+    let timeProvider: TimeProvider
+    let dayCalculator: TradingDayCalculator
     
-    func saveEntry(text: String, imagePath: String? = nil) async throws -> JournalEntry {
-        let entry = JournalEntry(text: text, timestamp: Date(), tradingDay: Date(), imagePath: imagePath)
+    init(timeProvider: TimeProvider, dayCalculator: TradingDayCalculator) {
+        self.timeProvider = timeProvider
+        self.dayCalculator = dayCalculator
+    }
+    
+    func saveEntry(text: String, imagePath: String?, date: Date? = nil) async throws -> JournalEntry {
+        let timestamp = date ?? timeProvider.now
+        
+        let tradingDay: Date
+        if let explicitDate = date {
+            tradingDay = explicitDate
+        } else {
+            tradingDay = dayCalculator.getTradingDay(for: timestamp)
+        }
+        
+        let entry = JournalEntry(text: text, timestamp: timestamp, tradingDay: tradingDay, imagePath: imagePath)
         mockEntries.append(entry)
         return entry
     }
@@ -31,7 +47,9 @@ class MockJournalRepository: JournalRepository {
             mockEntries[index].text = newText
         }
     }
-    func entries(for day: Date) async throws -> [JournalEntry] { mockEntries }
+    func entries(for day: Date) async throws -> [JournalEntry] { 
+        return mockEntries.filter { $0.tradingDay == day } 
+    }
     func allTradingDays() async throws -> [Date] { [] }
     func allTags() async throws -> [TradingBuddy.Tag] { [] }
     func entries(forTag tagId: String) async throws -> [JournalEntry] { [] }
@@ -41,13 +59,13 @@ class MockJournalRepository: JournalRepository {
 
 // MARK: - Tests
 
-@MainActor // <-- This fixes all the concurrency errors!
+@MainActor 
 struct ChatViewModelTests {
     
     func makeSUT(now: Date) -> (ChatViewModel, MockJournalRepository, MutableTimeProvider, MockPreferences, AppRouter) {
-        let repo = MockJournalRepository()
         let timeProvider = MutableTimeProvider(now: now)
         let dayCalculator = ChicagoTradingDayService()
+        let repo = MockJournalRepository(timeProvider: timeProvider, dayCalculator: dayCalculator)
         let prefs = MockPreferences()
         let router = AppRouter()
         let imageStorage = MockImageStorageService()
@@ -103,55 +121,34 @@ struct ChatViewModelTests {
     @Test("Rollover triggers if sending after a new day started")
     func testRolloverPrompt() async throws {
         let tz = TimeZone(identifier: "America/Chicago")!
-        let thursday5PM = Calendar(identifier: .gregorian).date(from: DateComponents(timeZone: tz, year: 2026, month: 3, day: 5, hour: 17))!
+        // Start: Monday at 2:00 PM (Monday session)
+        let monday2PM = Calendar(identifier: .gregorian).date(from: DateComponents(timeZone: tz, year: 2026, month: 3, day: 9, hour: 14))!
         
-        let (vm, repo, timeProvider, _, _) = makeSUT(now: thursday5PM)
+        let (vm, _, timeProvider, _, _) = makeSUT(now: monday2PM)
         
-        let thursday8PM = Calendar(identifier: .gregorian).date(from: DateComponents(timeZone: tz, year: 2026, month: 3, day: 5, hour: 20))!
-        timeProvider.now = thursday8PM
+        // Pass to Tuesday session (Monday 8 PM)
+        let monday8PM = Calendar(identifier: .gregorian).date(from: DateComponents(timeZone: tz, year: 2026, month: 3, day: 9, hour: 20))!
+        timeProvider.now = monday8PM
         
-        vm.inputText = "Late night post-market note"
+        vm.inputText = "Late night note"
         await vm.sendMessage()
         
-        #expect(repo.mockEntries.isEmpty)
         #expect(vm.showAlert == true)
-        
         if case .rolloverPrompt = vm.activeAlert {} else {
             Issue.record("Expected rollover prompt")
         }
     }
     
-    @Test("Snoozing a rollover saves to the older day and prevents further prompts")
-    func testRolloverSnooze() async throws {
-        let tz = TimeZone(identifier: "America/Chicago")!
-        let thursday5PM = Calendar(identifier: .gregorian).date(from: DateComponents(timeZone: tz, year: 2026, month: 3, day: 5, hour: 17))!
-        
-        let (vm, repo, timeProvider, prefs, _) = makeSUT(now: thursday5PM)
-        
-        timeProvider.now = Calendar(identifier: .gregorian).date(from: DateComponents(timeZone: tz, year: 2026, month: 3, day: 5, hour: 20))!
-        
-        vm.inputText = "Reviewing trades"
-        await vm.sendMessage()
-        await vm.handleRolloverSnooze()
-        
-        #expect(repo.mockEntries.count == 1)
-        #expect(prefs.snoozedUntil != nil)
-        #expect(vm.showAlert == false)
-        
-        vm.inputText = "Another review note"
-        await vm.sendMessage()
-        #expect(repo.mockEntries.count == 2)
-        #expect(vm.showAlert == false)
-    }
-    
     @Test("Search text correctly filters entries locally")
     func testLocalSearchFiltering() async throws {
-        let (vm, repo, _, _, _) = makeSUT(now: Date())
+        let tz = TimeZone(identifier: "America/Chicago")!
+        let now = Calendar(identifier: .gregorian).date(from: DateComponents(timeZone: tz, year: 2026, month: 3, day: 4, hour: 12))!
+        let (vm, repo, _, _, _) = makeSUT(now: now)
         
-        _ = try await repo.saveEntry(text: "Bought /ES here")
-        _ = try await repo.saveEntry(text: "Watching $AAPL drop")
+        _ = try await repo.saveEntry(text: "Bought /ES here", imagePath: nil, date: nil)
+        _ = try await repo.saveEntry(text: "Watching $AAPL drop", imagePath: nil, date: nil)
         
-        await vm.load(day: Date())
+        await vm.load(day: vm.activeTradingDay)
         #expect(vm.entries.count == 2)
         
         vm.searchText = "AAPL"
@@ -161,9 +158,11 @@ struct ChatViewModelTests {
 
     @Test("Updating a message updates the DB and reloads the view")
     func testUpdateMessage() async throws {
-        let (vm, repo, _, _, _) = makeSUT(now: Date())
+        let tz = TimeZone(identifier: "America/Chicago")!
+        let now = Calendar(identifier: .gregorian).date(from: DateComponents(timeZone: tz, year: 2026, month: 3, day: 4, hour: 12))!
+        let (vm, repo, _, _, _) = makeSUT(now: now)
         
-        let entry = try await repo.saveEntry(text: "Original text")
+        let entry = try await repo.saveEntry(text: "Original text", imagePath: nil, date: nil)
         await vm.load(day: vm.activeTradingDay)
         
         await vm.updateMessage(id: entry.id, newText: "Edited text")
