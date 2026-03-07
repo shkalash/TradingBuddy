@@ -1,14 +1,24 @@
 import SwiftUI
 import GRDB
 
+/// The entry point of the TradingBuddy application.
+///
+/// **Responsibilities:**
+/// - Initializing core services and infrastructure (Database, Image Storage).
+/// - Injecting global state (ViewModel, Router, Color Service) into the environment.
+/// - Defining the primary window group and settings scene.
 @main
 struct TradingBuddyApp: App {
-    let repository: JournalRepository
-    let imageStorage: ImageStorageService
+    // MARK: - Properties
+    
+    private let repository: JournalRepository
+    private let imageStorage: ImageStorageService
     
     @State private var viewModel: ChatViewModel
     @State private var router: AppRouter
     @State private var colorService = TagColorService()
+    
+    // MARK: - Initialization
     
     init() {
         let storage = LocalImageStorageService()
@@ -43,6 +53,8 @@ struct TradingBuddyApp: App {
         self._viewModel = State(wrappedValue: vm)
         self._router = State(wrappedValue: initialRouter)
     }
+    
+    // MARK: - Body
     
     var body: some Scene {
         WindowGroup {

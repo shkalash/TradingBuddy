@@ -1,14 +1,26 @@
 import Foundation
 import AppKit
 
+/// The concrete implementation of `ImageStorageService` for local disk persistence.
+///
+/// **Responsibilities:**
+/// - Managing the creation and cleanup of image directories.
+/// - Serializing `NSImage` objects to PNG files on disk.
+/// - Providing isolated storage paths for debug and production environments.
 public class LocalImageStorageService: ImageStorageService {
+    // MARK: - Properties
+    
     private var imagesDirectory: URL {
         AppStoragePaths.imagesDirectory
     }
     
+    // MARK: - Initialization
+    
     public init() {
         try? FileManager.default.createDirectory(at: self.imagesDirectory, withIntermediateDirectories: true)
     }
+    
+    // MARK: - ImageStorageService Implementation
     
     public func saveImage(_ image: NSImage, date: Date) async throws -> String {
         let formatter = DateFormatter()

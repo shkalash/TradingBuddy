@@ -1,59 +1,48 @@
 import SwiftUI
 import AppKit
 
+/// A specialized text input view that supports image pasting from the macOS clipboard.
+///
+/// **Responsibilities:**
+/// - Wrapping a native `NSTextView` for advanced input handling.
+/// - Intercepting paste commands to extract `NSImage` data.
+/// - Handling "Enter" and "Shift+Enter" for message submission and newlines.
+/// - Synchronizing its internal state with a SwiftUI `String` binding.
 struct PasteboardTextView: NSViewRepresentable {
+    // MARK: - Properties
+    
     @Binding var text: String
     var onImagePasted: ((NSImage) -> Void)?
     var onSubmit: (() -> Void)?
+    
+    // MARK: - NSViewRepresentable
+    
+    func makeNSView(context: Context) -> NSScrollView {
+        let scrollView = NSTextView.scrollableTextView()
+        let textView = scrollView.documentView as! NSTextView
+        
+        textView.delegate = context.coordinator
+        textView.isRichText = false
+        textView.allowsUndo = true
+        textView.font = .systemFont(ofSize: 14)
+        textView.isAutomaticQuoteSubstitutionEnabled = false
+        textView.isAutomaticDashSubstitutionEnabled = false
+        
+        return scrollView
+    }
+    
+    func updateNSView(_ nsView: NSScrollView, context: Context) {
+        let textView = nsView.documentView as! NSTextView
+        if textView.string != text {
+            textView.string = text
+        }
+    }
     
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
     }
     
-    func makeNSView(context: Context) -> NSScrollView {
-        // 1. Create the ScrollView manually
-        let scrollView = NSScrollView()
-        scrollView.hasVerticalScroller = true
-        scrollView.drawsBackground = false
-        
-        // 2. Create our Custom Subclass
-        let textView = CustomNSTextView()
-        
-        // 3. Configure it to auto-wrap text correctly
-        textView.autoresizingMask = [.width]
-        textView.isVerticallyResizable = true
-        textView.isHorizontallyResizable = false
-        textView.textContainer?.widthTracksTextView = true
-        
-        // 4. Style it
-        textView.drawsBackground = false
-        textView.isRichText = false
-        textView.allowsUndo = true
-        textView.font = NSFont.systemFont(ofSize: NSFont.systemFontSize)
-        
-        // 5. Hook up delegates and closures
-        textView.delegate = context.coordinator
-        textView.onImagePasted = onImagePasted
-        textView.onSubmit = onSubmit
-        
-        scrollView.documentView = textView
-        return scrollView
-    }
-    
-    func updateNSView(_ nsView: NSScrollView, context: Context) {
-        context.coordinator.parent = self
-        guard let textView = nsView.documentView as? CustomNSTextView else { return }
-        
-        // Ensure closures stay fresh
-        textView.onImagePasted = onImagePasted
-        textView.onSubmit = onSubmit
-        
-        if textView.string != text {
-            let selectedRanges = textView.selectedRanges
-            textView.string = text
-            textView.selectedRanges = selectedRanges
-        }
-    }
+    // MARK: - Coordinator
     
     class Coordinator: NSObject, NSTextViewDelegate {
         var parent: PasteboardTextView
@@ -64,43 +53,58 @@ struct PasteboardTextView: NSViewRepresentable {
         
         func textDidChange(_ notification: Notification) {
             guard let textView = notification.object as? NSTextView else { return }
-            self.parent.text = textView.string
+            parent.text = textView.string
+        }
+        
+        func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+            // Handle Enter key for submission
+            if commandSelector == #selector(NSResponder.insertNewline(_:)) {
+                if let event = NSApp.currentEvent, event.modifierFlags.contains(.shift) {
+                    return false // Let it insert a newline
+                } else {
+                    parent.onSubmit?()
+                    return true
+                }
+            }
+            return false
         }
     }
 }
 
-// MARK: - AppKit Subclass
+// MARK: - Custom NSTextView Implementation
 
-class CustomNSTextView: NSTextView {
+/// An internal `NSTextView` subclass that overrides `paste(_:)` to handle image data.
+class PasteboardEnabledTextView: NSTextView {
     var onImagePasted: ((NSImage) -> Void)?
-    var onSubmit: (() -> Void)?
     
-    // 1. FORCE MACOS TO ENABLE THE PASTE BUTTON
-    override func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
-        if menuItem.action == #selector(paste(_:)) {
-            // If there's an image on the clipboard, tell macOS we are allowed to paste it!
-            if NSPasteboard.general.canReadObject(forClasses: [NSImage.self], options: nil) {
-                return true
-            }
-        }
-        return super.validateMenuItem(menuItem)
-    }
-    
-    // 2. INTERCEPT THE PASTE ACTION (Cmd+V or Right Click -> Paste)
     override func paste(_ sender: Any?) {
-        if let image = NSImage(pasteboard: NSPasteboard.general) {
-            onImagePasted?(image)
-            return // Stop here so the image data isn't shoved into the text field
-        }
-        super.paste(sender) // Fallback for normal text
-    }
-    
-    // 3. INTERCEPT THE ENTER KEY
-    override func insertNewline(_ sender: Any?) {
-        if let event = NSApplication.shared.currentEvent, event.modifierFlags.contains(.shift) {
-            super.insertNewline(sender) // Shift+Enter = normal new line
+        let pb = NSPasteboard.general
+        if let images = pb.readObjects(forClasses: [NSImage.self], options: nil) as? [NSImage], let first = images.first {
+            onImagePasted?(first)
         } else {
-            onSubmit?() // Enter = Send message
+            super.paste(sender)
         }
+    }
+}
+
+extension NSTextView {
+    /// Helper to initialize the scrollable text view with our custom paste-enabled subclass.
+    static func scrollableTextViewWithPaste() -> NSScrollView {
+        let scrollView = NSScrollView()
+        scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = false
+        
+        let contentSize = scrollView.contentSize
+        let textView = PasteboardEnabledTextView(frame: NSRect(origin: .zero, size: contentSize))
+        textView.minSize = NSSize(width: 0, height: contentSize.height)
+        textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        textView.isVerticallyResizable = true
+        textView.isHorizontallyResizable = false
+        textView.autoresizingMask = .width
+        textView.textContainer?.containerSize = NSSize(width: contentSize.width, height: CGFloat.greatestFiniteMagnitude)
+        textView.textContainer?.widthTracksTextView = true
+        
+        scrollView.documentView = textView
+        return scrollView
     }
 }
