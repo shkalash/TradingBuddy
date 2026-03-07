@@ -35,7 +35,8 @@ class MockJournalRepository: JournalRepository {
     func allTradingDays() async throws -> [Date] { [] }
     func allTags() async throws -> [TradingBuddy.Tag] { [] }
     func entries(forTag tagId: String) async throws -> [JournalEntry] { [] }
-    func clearDatabase() async throws { mockEntries.removeAll() }
+    func clearDatabaseOnly() async throws { mockEntries.removeAll() }
+    func clearDatabaseAndImages() async throws { mockEntries.removeAll() }
 }
 
 // MARK: - Tests

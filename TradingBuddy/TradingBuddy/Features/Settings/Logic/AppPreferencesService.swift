@@ -1,18 +1,4 @@
-//
-//  PreferencesService.swift
-//  TradingBuddy
-//
-//  Created by Shai Kalev on 3/6/26.
-//
-
-
 import Foundation
-
-public protocol PreferencesService {
-    var showHistoryJumpWarning: Bool { get set }
-    var rolloverPromptDelayHours: Int { get set }
-    var snoozedUntil: Date? { get set }
-}
 
 public class AppPreferencesService: PreferencesService {
     private let defaults = UserDefaults.standard
