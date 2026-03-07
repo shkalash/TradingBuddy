@@ -35,25 +35,25 @@ public struct AppDatabase {
         migrator.eraseDatabaseOnSchemaChange = true
         #endif
         
-        migrator.registerMigration("createJournal") { db in
-            try db.create(table: "journalEntry") { t in
-                t.column("id", .text).primaryKey()
-                t.column("text", .text).notNull()
-                t.column("timestamp", .datetime).notNull().indexed()
-                t.column("tradingDay", .datetime).notNull().indexed()
-                t.column("imagePath", .text)
+        migrator.registerMigration(AppConstants.Database.Migrations.createJournal) { db in
+            try db.create(table: AppConstants.Database.journalTable) { t in
+                t.column(AppConstants.Database.Columns.id, .text).primaryKey()
+                t.column(AppConstants.Database.Columns.text, .text).notNull()
+                t.column(AppConstants.Database.Columns.timestamp, .datetime).notNull().indexed()
+                t.column(AppConstants.Database.Columns.tradingDay, .datetime).notNull().indexed()
+                t.column(AppConstants.Database.Columns.imagePath, .text)
             }
             
-            try db.create(table: "tag") { t in
-                t.column("id", .text).primaryKey() // The tag string itself
-                t.column("type", .text).notNull()
-                t.column("lastUsed", .datetime).notNull()
+            try db.create(table: AppConstants.Database.tagTable) { t in
+                t.column(AppConstants.Database.Columns.id, .text).primaryKey()
+                t.column(AppConstants.Database.Columns.type, .text).notNull()
+                t.column(AppConstants.Database.Columns.lastUsed, .datetime).notNull()
             }
             
-            try db.create(table: "entryTag") { t in
-                t.column("entryId", .text).notNull().references("journalEntry", onDelete: .cascade)
-                t.column("tagId", .text).notNull().references("tag", onDelete: .cascade)
-                t.primaryKey(["entryId", "tagId"])
+            try db.create(table: AppConstants.Database.entryTagTable) { t in
+                t.column(AppConstants.Database.Columns.entryId, .text).notNull().references(AppConstants.Database.journalTable, onDelete: .cascade)
+                t.column(AppConstants.Database.Columns.tagId, .text).notNull().references(AppConstants.Database.tagTable, onDelete: .cascade)
+                t.primaryKey([AppConstants.Database.Columns.entryId, AppConstants.Database.Columns.tagId])
             }
         }
         

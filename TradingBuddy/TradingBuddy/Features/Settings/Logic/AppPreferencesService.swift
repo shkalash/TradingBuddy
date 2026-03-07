@@ -20,17 +20,17 @@ public class AppPreferencesService: PreferencesService {
     // MARK: - Preferences
     
     public var showHistoryJumpWarning: Bool {
-        get { defaults.object(forKey: "showHistoryJumpWarning") as? Bool ?? true }
-        set { defaults.set(newValue, forKey: "showHistoryJumpWarning") }
+        get { defaults.object(forKey: AppConstants.Storage.showHistoryJumpWarningKey) as? Bool ?? true }
+        set { defaults.set(newValue, forKey: AppConstants.Storage.showHistoryJumpWarningKey) }
     }
     
     public var rolloverPromptDelayHours: Int {
-        get { defaults.object(forKey: "rolloverPromptDelayHours") as? Int ?? 2 }
-        set { defaults.set(newValue, forKey: "rolloverPromptDelayHours") }
+        get { defaults.object(forKey: AppConstants.Storage.rolloverPromptDelayHoursKey) as? Int ?? 2 }
+        set { defaults.set(newValue, forKey: AppConstants.Storage.rolloverPromptDelayHoursKey) }
     }
     
     public var snoozedUntil: Date? {
-        get { defaults.object(forKey: "snoozedUntil") as? Date }
-        set { defaults.set(newValue, forKey: "snoozedUntil") }
+        get { defaults.object(forKey: AppConstants.Storage.snoozedUntilKey) as? Date }
+        set { defaults.set(newValue, forKey: AppConstants.Storage.snoozedUntilKey) }
     }
 }

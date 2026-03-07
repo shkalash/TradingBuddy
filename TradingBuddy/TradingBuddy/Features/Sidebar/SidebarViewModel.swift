@@ -88,7 +88,9 @@ public final class SidebarViewModel {
         }
         
         self.currentMonthDays = currentDays.sorted(by: >)
-        self.currentMonthTitle = "Current Month (\(calendar.monthSymbols[currentMonth - 1]))"
+        
+        let monthName = calendar.monthSymbols[currentMonth - 1]
+        self.currentMonthTitle = String(localized: "sidebar.current_month.title \(monthName)", comment: "Title for current month section in sidebar")
         
         var histYears: [HistoryYear] = []
         for year in historyDict.keys.sorted(by: >) {

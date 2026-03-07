@@ -77,12 +77,12 @@ struct MessageBubble: View {
     
     @ViewBuilder
     private var contextButtons: some View {
-        Button("Copy Text") {
+        Button("chat.message.context.copy") {
             let pasteboard = NSPasteboard.general
             pasteboard.clearContents()
             pasteboard.setString(entry.text, forType: .string)
         }
-        Button("Edit Message") { onEdit(entry.id, entry.text) }
+        Button("chat.message.context.edit") { onEdit(entry.id, entry.text) }
     }
     
     // MARK: - Logic
@@ -92,9 +92,9 @@ struct MessageBubble: View {
         let nsString = rawText as NSString
         
         let patterns: [(String, TagType)] = [
-            ("(?<!\\S)/[A-Za-z0-9]+", .future),
-            ("(?<!\\S)\\$[A-Za-z]+", .ticker),
-            ("(?<!\\S)#[A-Za-z0-9_]+", .topic)
+            (AppConstants.Patterns.future, .future),
+            (AppConstants.Patterns.ticker, .ticker),
+            (AppConstants.Patterns.topic, .topic)
         ]
         
         for (pattern, type) in patterns {

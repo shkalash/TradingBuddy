@@ -12,12 +12,11 @@ public class TagColorService {
     // MARK: - Properties
     
     private let defaults: UserDefaults
-    private let colorsKey = "tagCategoryColors"
     
     public var colorMap: [String: String] = [:] {
         didSet {
             if let encoded = try? JSONEncoder().encode(colorMap) {
-                defaults.set(encoded, forKey: colorsKey)
+                defaults.set(encoded, forKey: AppConstants.Storage.tagCategoryColorsKey)
             }
         }
     }
@@ -26,7 +25,7 @@ public class TagColorService {
     
     public init(defaults: UserDefaults = .init(suiteName: AppStoragePaths.userDefaultsSuiteName) ?? .standard) {
         self.defaults = defaults
-        if let data = defaults.data(forKey: colorsKey),
+        if let data = defaults.data(forKey: AppConstants.Storage.tagCategoryColorsKey),
            let decoded = try? JSONDecoder().decode([String: String].self, from: data) {
             self.colorMap = decoded
         }

@@ -38,8 +38,8 @@ struct ChatView: View {
         .sheet(isPresented: $isShowingImagePreview) { imagePreviewSheet }
         .sheet(isPresented: $isShowingPendingImagePreview) { pendingImagePreviewSheet }
         .navigationTitle(navigationTitle)
-        .searchable(text: $bindableViewModel.searchText, prompt: "Search...")
-        .alert("Notice", isPresented: $bindableViewModel.showAlert, presenting: viewModel.activeAlert) { alert in
+        .searchable(text: $bindableViewModel.searchText, prompt: Text("chat.search.placeholder"))
+        .alert(Text("chat.alert.notice.title"), isPresented: $bindableViewModel.showAlert, presenting: viewModel.activeAlert) { alert in
             alertButtons(for: alert)
         } message: { alert in
             alertMessage(for: alert)
@@ -115,21 +115,20 @@ struct ChatView: View {
     // MARK: - Helpers
     
     private var navigationTitle: String {
-        viewModel.viewedTag != nil
-        ? "Tag: \(viewModel.viewedTag!)"
-        : viewModel.viewedDay.formatted(.dateTime.month().day().year())
+        if let tag = viewModel.viewedTag {
+            return String(localized: "chat.navigation.tag_title \(tag)", comment: "Navigation title for tag view")
+        } else {
+            return viewModel.viewedDay.formatted(.dateTime.month().day().year())
+        }
     }
     
     private func send() {
         Task { await viewModel.sendMessage() }
     }
     
-    // MARK: - Sheets & Alerts (Omitted for brevity in this step, but preserved in file)
-    // [I will write the FULL file now to be safe]
-    
     private var editSheet: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Edit Message").font(.headline)
+            Text("chat.edit.title").font(.headline)
             TextEditor(text: $editingText)
                 .font(.body)
                 .frame(minHeight: 100)
@@ -140,8 +139,8 @@ struct ChatView: View {
             
             HStack {
                 Spacer()
-                Button("Cancel") { isEditing = false }.keyboardShortcut(.cancelAction)
-                Button("Save") {
+                Button("chat.edit.cancel") { isEditing = false }.keyboardShortcut(.cancelAction)
+                Button("chat.edit.save") {
                     if let id = editingEntryId {
                         Task {
                             await viewModel.updateMessage(id: id, newText: editingText)
@@ -229,6 +228,7 @@ struct ChatView: View {
             }
             .buttonStyle(.plain)
             .offset(x: 6, y: -6)
+            .help(Text("chat.input.attachment.remove_help"))
         }
         .padding(.top, 12)
         .padding(.horizontal, 14)
@@ -249,12 +249,12 @@ struct ChatView: View {
     private func alertButtons(for alert: ChatViewModel.AlertType) -> some View {
         switch alert {
             case .historyWarning:
-                Button("Jump to Today") { Task { await viewModel.handleAlertConfirmation() } }
-                Button("Cancel", role: .cancel) { viewModel.cancelAlert() }
+                Button("chat.alert.history.jump_today") { Task { await viewModel.handleAlertConfirmation() } }
+                Button("chat.alert.history.cancel", role: .cancel) { viewModel.cancelAlert() }
             case .rolloverPrompt:
-                Button("Start New Day") { Task { await viewModel.handleAlertConfirmation() } }
-                Button("Snooze (1 Hour)") { Task { await viewModel.handleRolloverSnooze() } }
-                Button("Cancel", role: .cancel) { viewModel.cancelAlert() }
+                Button("chat.alert.rollover.start_new") { Task { await viewModel.handleAlertConfirmation() } }
+                Button("chat.alert.rollover.snooze") { Task { await viewModel.handleRolloverSnooze() } }
+                Button("chat.alert.rollover.cancel", role: .cancel) { viewModel.cancelAlert() }
         }
     }
 
@@ -262,9 +262,9 @@ struct ChatView: View {
     private func alertMessage(for alert: ChatViewModel.AlertType) -> some View {
         switch alert {
             case .historyWarning:
-                Text("You are viewing a past day or a tag filter. Do you want to jump to today and save this entry?")
+                Text("chat.alert.history.message")
             case .rolloverPrompt:
-                Text("A new trading day has started. Would you like to start a new day entry?")
+                Text("chat.alert.rollover.message")
         }
     }
 }

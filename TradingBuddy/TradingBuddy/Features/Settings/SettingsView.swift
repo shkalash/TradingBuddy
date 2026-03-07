@@ -1,11 +1,6 @@
 import SwiftUI
 import AppKit
 
-extension Notification.Name {
-    static let databaseUpdated = Notification.Name("databaseUpdated")
-    static let databaseCleared = Notification.Name("TradingBuddy.databaseCleared")
-}
-
 /// The unified interface for managing application preferences and customizations.
 ///
 /// **Responsibilities:**
@@ -24,10 +19,14 @@ struct SettingsView: View {
     var body: some View {
         TabView {
             GeneralSettingsTab(repository: repository, imageStorage: imageStorage)
-                .tabItem { Label("General", systemImage: "gearshape") }
+                .tabItem { 
+                    Label(String(localized: "settings.tab.general", comment: "General settings tab title"), systemImage: "gearshape") 
+                }
             
             TagColorsTab()
-                .tabItem { Label("Tags", systemImage: "paintpalette") }
+                .tabItem { 
+                    Label(String(localized: "settings.tab.tags", comment: "Tag colors settings tab title"), systemImage: "paintpalette") 
+                }
         }
         .frame(width: 450, height: 350)
     }

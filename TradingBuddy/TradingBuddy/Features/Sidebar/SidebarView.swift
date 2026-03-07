@@ -34,10 +34,10 @@ struct SidebarView: View {
             tagSection(selection: $bindableRouter.selection)
         }
         .task { await viewModel.fetchData() }
-        .onReceive(NotificationCenter.default.publisher(for: .databaseCleared)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: AppConstants.Notifications.databaseCleared)) { _ in
             handleDatabaseClear()
         }
-        .onReceive(NotificationCenter.default.publisher(for: .databaseUpdated)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: AppConstants.Notifications.databaseUpdated)) { _ in
             Task { await viewModel.fetchData() }
         }
     }
@@ -46,7 +46,7 @@ struct SidebarView: View {
     
     private func dateSection(selection: Binding<NavigationSelection?>) -> some View {
         List(selection: selection) {
-            Section("Trading Days") {
+            Section(header: Text("sidebar.section.trading_days")) {
                 currentMonthDisclosure
                 historyDisclosure
             }
@@ -57,9 +57,9 @@ struct SidebarView: View {
     
     private func tagSection(selection: Binding<NavigationSelection?>) -> some View {
         List(selection: selection) {
-            TagSidebarSection(title: "Futures", tags: viewModel.futureTags, icon: "chart.line.uptrend.xyaxis", color: colorService.getColor(for: .future))
-            TagSidebarSection(title: "Tickers", tags: viewModel.tickerTags, icon: "building.columns.fill", color: colorService.getColor(for: .ticker))
-            TagSidebarSection(title: "Topics", tags: viewModel.topicTags, icon: "number", color: colorService.getColor(for: .topic))
+            TagSidebarSection(title: String(localized: "sidebar.section.tags.futures"), tags: viewModel.futureTags, icon: "chart.line.uptrend.xyaxis", color: colorService.getColor(for: .future))
+            TagSidebarSection(title: String(localized: "sidebar.section.tags.tickers"), tags: viewModel.tickerTags, icon: "building.columns.fill", color: colorService.getColor(for: .ticker))
+            TagSidebarSection(title: String(localized: "sidebar.section.tags.topics"), tags: viewModel.topicTags, icon: "number", color: colorService.getColor(for: .topic))
         }
         .listStyle(.sidebar)
         .frame(minHeight: 100)
@@ -91,7 +91,7 @@ struct SidebarView: View {
                         yearDisclosure(for: year)
                     }
                 } label: {
-                    ClickableDisclosureLabel(title: "History", isExpanded: $isHistoryExpanded)
+                    ClickableDisclosureLabel(title: String(localized: "sidebar.history.label"), isExpanded: $isHistoryExpanded)
                 }
             }
         }

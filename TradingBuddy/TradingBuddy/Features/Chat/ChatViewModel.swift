@@ -81,7 +81,7 @@ public final class ChatViewModel {
         do {
             self.entries = try await repository.entries(for: day)
         } catch {
-            print("Failed to load entries: \(error)")
+            print("ChatViewModel: Failed to load entries: \(error)")
         }
     }
 
@@ -92,7 +92,7 @@ public final class ChatViewModel {
         do {
             self.entries = try await repository.entries(forTag: tag)
         } catch {
-            print("Failed to load tag entries: \(error)")
+            print("ChatViewModel: Failed to load tag entries: \(error)")
         }
     }
 
@@ -127,9 +127,6 @@ public final class ChatViewModel {
         guard !text.isEmpty || pendingImage != nil else { return }
 
         let targetDay = viewedTag != nil ? activeTradingDay : date
-        
-        // DEBUG PRINT
-        print("[ChatViewModel] performSave targetDay: \(targetDay), viewedDay: \(viewedDay), activeTradingDay: \(activeTradingDay)")
 
         var imagePath: String? = nil
         if let image = pendingImage {
@@ -144,7 +141,7 @@ public final class ChatViewModel {
             if let tag = viewedTag { await load(tag: tag) }
             else { await load(day: viewedDay) }
         } catch {
-            print("Failed to save entry: \(error)")
+            print("ChatViewModel: Failed to save entry: \(error)")
         }
     }
 
@@ -155,7 +152,7 @@ public final class ChatViewModel {
             if let tag = viewedTag { await load(tag: tag) }
             else { await load(day: viewedDay) }
         } catch {
-            print("Failed to update message: \(error)")
+            print("ChatViewModel: Failed to update message: \(error)")
         }
     }
 
