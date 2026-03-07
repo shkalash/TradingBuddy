@@ -26,61 +26,71 @@ public class GRDBJournalRepository: JournalRepository {
     }
     
     public func saveEntry(text: String, imagePath: String?) async throws -> JournalEntry {
-        let currentRealTime = timeProvider.now
-        let calculatedDay = dayCalculator.getTradingDay(for: currentRealTime)
-        let extractedTags = parser.extractTags(from: text)
-        
-        let savedEntry = try await appDb.dbWriter.write { db -> JournalEntry in
-            let newEntry = JournalEntry(
-                id: UUID().uuidString,
-                text: text,
-                timestamp: currentRealTime,
-                tradingDay: calculatedDay,
-                imagePath: imagePath
-            )
+            let currentRealTime = timeProvider.now
+            let calculatedDay = dayCalculator.getTradingDay(for: currentRealTime)
+            let extractedTags = parser.extractTags(from: text)
             
-            try newEntry.insert(db)
-            
-            for pt in extractedTags {
-                let tag = Tag(id: pt.id, type: pt.type, lastUsed: currentRealTime)
-                try tag.save(db)
+            let savedEntry = try await appDb.dbWriter.write { db -> JournalEntry in
+                let newEntry = JournalEntry(
+                    id: UUID().uuidString,
+                    text: text,
+                    timestamp: currentRealTime,
+                    tradingDay: calculatedDay,
+                    imagePath: imagePath
+                )
                 
-                let entryTag = EntryTag(entryId: newEntry.id, tagId: tag.id)
-                try entryTag.insert(db)
-            }
-            
-            return newEntry
-        }
-        
-        return savedEntry
-    }
-    
-    public func updateEntry(id: String, newText: String) async throws {
-        let now = timeProvider.now
-        let parsedTags = parser.extractTags(from: newText)
-        
-        try await appDb.dbWriter.write { db in
-            guard var entry = try JournalEntry.fetchOne(db, key: id) else { return }
-            
-            entry.text = newText
-            try entry.update(db)
-            
-            try EntryTag.filter(Column("entryId") == id).deleteAll(db)
-            
-            for pTag in parsedTags {
-                if var existingTag = try Tag.fetchOne(db, key: pTag.id) {
-                    existingTag.lastUsed = now
-                    try existingTag.update(db)
-                } else {
-                    let newTag = Tag(id: pTag.id, type: pTag.type, lastUsed: now)
-                    try newTag.insert(db)
+                try newEntry.insert(db)
+                
+                for pt in extractedTags {
+                    let tag = Tag(id: pt.id, type: pt.type, lastUsed: currentRealTime)
+                    try tag.save(db)
+                    
+                    let entryTag = EntryTag(entryId: newEntry.id, tagId: tag.id)
+                    try entryTag.insert(db)
                 }
                 
-                let link = EntryTag(entryId: id, tagId: pTag.id)
-                try link.save(db)
+                return newEntry
+            }
+            
+            // POST THE UPDATE NOTIFICATION
+            await MainActor.run {
+                NotificationCenter.default.post(name: .databaseUpdated, object: nil)
+            }
+            
+            return savedEntry
+        }
+        
+        public func updateEntry(id: String, newText: String) async throws {
+            let now = timeProvider.now
+            let parsedTags = parser.extractTags(from: newText)
+            
+            try await appDb.dbWriter.write { db in
+                guard var entry = try JournalEntry.fetchOne(db, key: id) else { return }
+                
+                entry.text = newText
+                try entry.update(db)
+                
+                try EntryTag.filter(Column("entryId") == id).deleteAll(db)
+                
+                for pTag in parsedTags {
+                    if var existingTag = try Tag.fetchOne(db, key: pTag.id) {
+                        existingTag.lastUsed = now
+                        try existingTag.update(db)
+                    } else {
+                        let newTag = Tag(id: pTag.id, type: pTag.type, lastUsed: now)
+                        try newTag.insert(db)
+                    }
+                    
+                    let link = EntryTag(entryId: id, tagId: pTag.id)
+                    try link.save(db)
+                }
+            }
+            
+            // POST THE UPDATE NOTIFICATION
+            await MainActor.run {
+                NotificationCenter.default.post(name: .databaseUpdated, object: nil)
             }
         }
-    }
     
     public func entries(for day: Date) async throws -> [JournalEntry] {
         try await appDb.dbWriter.read { db in

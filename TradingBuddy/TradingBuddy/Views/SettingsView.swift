@@ -2,6 +2,7 @@ import SwiftUI
 import AppKit
 
 extension Notification.Name {
+    static let databaseUpdated = Notification.Name("databaseUpdated")
     static let databaseCleared = Notification.Name("TradingBuddy.databaseCleared")
 }
 
