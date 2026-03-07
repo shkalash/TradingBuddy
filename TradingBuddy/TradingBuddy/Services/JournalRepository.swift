@@ -142,7 +142,6 @@ public class GRDBJournalRepository: JournalRepository {
 // MARK: - Debug
 #if DEBUG
 
-// 1. Pure data structs using strictly Sendable primitives to cross the thread boundary safely.
 struct RawSeedTag: Sendable {
     let id: String
     let type: TagType
@@ -157,6 +156,7 @@ struct RawSeedData: Sendable {
 }
 
 extension GRDBJournalRepository {
+    @MainActor
     public func debugPopulate() async throws {
         let calendar = Calendar.current
         let today = Date()
@@ -164,30 +164,29 @@ extension GRDBJournalRepository {
         
         var tempRecords: [RawSeedData] = []
         
-        let dayOffsets = (0..<25).map { _ in Int.random(in: 0...180) }
+        // 1. Generate 5 days from the CURRENT month, plus 35 random days over the last 3 years (1000 days)
+        let recentOffsets = (0..<5).map { _ in Int.random(in: 0...20) }
+        let historyOffsets = (0..<35).map { _ in Int.random(in: 30...1000) }
+        let allOffsets = Array(Set(recentOffsets + historyOffsets)).sorted(by: >)
         
-        for dayOffset in dayOffsets {
+        for dayOffset in allOffsets {
             guard let date = calendar.date(byAdding: .day, value: -dayOffset, to: today) else { continue }
             let startOfDay = calendar.startOfDay(for: date)
             
-            let entriesCount = Int.random(in: 4...8)
+            let entriesCount = Int.random(in: 2...6)
             
             for i in 0..<entriesCount {
                 let tag1 = sampleTags.randomElement()!
                 let tag2 = sampleTags.randomElement()!
-                let text = "Debug trade note \(i) for \(date.formatted(.dateTime.month().day().year())): Watched \(tag1) closely. Felt a bit of \(tag2)."
+                let text = "Debug trade note \(i) for \(date.formatted(.dateTime.year().month().day())): Watched \(tag1) closely. Felt a bit of \(tag2)."
                 
                 let randomSeconds = TimeInterval(Int.random(in: 28800...57600))
                 let entryTimestamp = startOfDay.addingTimeInterval(randomSeconds)
                 
-                // Safe to use main-actor parser & dayCalculator here
                 let tradingDay = dayCalculator.getTradingDay(for: entryTimestamp)
                 let parsedTags = parser.extractTags(from: text)
-                
-                // Extract just the raw data from the tags
                 let rawTags = parsedTags.map { RawSeedTag(id: $0.id, type: $0.type) }
                 
-                // Store only primitives, do NOT instantiate JournalEntry yet!
                 tempRecords.append(RawSeedData(
                     id: UUID().uuidString,
                     text: text,
@@ -198,13 +197,10 @@ extension GRDBJournalRepository {
             }
         }
         
-        // Freeze the mutable array into a Sendable 'let' constant
         let recordsToInsert = tempRecords
         
-        // Pass only the frozen, primitive data into the database closure
         try await appDb.dbWriter.write { db in
             for record in recordsToInsert {
-                // 2. Instantiate JournalEntry entirely INSIDE the background closure
                 let newEntry = JournalEntry(
                     id: record.id,
                     text: record.text,

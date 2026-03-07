@@ -286,7 +286,7 @@ struct MessageBubble: View {
     var onEdit: (String, String) -> Void
     var onImageTap: (URL) -> Void
     
-    @Environment(TagColorService.self) private var colorService 
+    @Environment(TagColorService.self) private var colorService
     private let storage = LocalImageStorageService()
     
     var body: some View {
@@ -308,7 +308,6 @@ struct MessageBubble: View {
                 }
                 
                 if !entry.text.isEmpty {
-                    // <-- CHANGED: Now uses the rich text formatter
                     Text(formatText(entry.text))
                         .textSelection(.enabled)
                 }
@@ -317,7 +316,15 @@ struct MessageBubble: View {
             .background(Color.accentColor.opacity(0.1))
             .cornerRadius(8)
             .contextMenu {
-                Button("Edit Message") { onEdit(entry.id, entry.text) }
+                Button("Copy Text") {
+                    let pasteboard = NSPasteboard.general
+                    pasteboard.clearContents()
+                    pasteboard.setString(entry.text, forType: .string)
+                }
+                
+                Button("Edit Message") {
+                    onEdit(entry.id, entry.text)
+                }
             }
         }
     }
