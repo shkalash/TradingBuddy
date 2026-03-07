@@ -16,17 +16,14 @@ struct ContentView: View {
             router.selection = .day(viewModel.activeTradingDay)
         }
         // Watch the router, load data when it changes
-        .onChange(of: router.selection) { _, newSelection in
-            guard let newSelection = newSelection else { return }
-            Task {
-                switch newSelection {
-                    case .day(let date):
-                        await viewModel.load(day: date)
-                    case .tag(let tagId):
-                        await viewModel.load(tag: tagId)
-                }
+        .task(id: router.selection) {
+            guard let selection = router.selection else { return }
+            switch selection {
+                case .day(let date): await viewModel.load(day: date)
+                case .tag(let tagId): await viewModel.load(tag: tagId)
             }
-        }// Listen for the clear signal from the Settings window
+        }
+        // Listen for the clear signal from the Settings window
         .onReceive(NotificationCenter.default.publisher(for: .databaseCleared)) { _ in
             Task {
                 // Force a reload of whatever view we are currently looking at
@@ -53,7 +50,7 @@ struct ContentView: View {
                     }
                 }) {
                     Label("Seed DB", systemImage: "sparkles")
-                        .foregroundColor(.purple)
+                        .foregroundStyle(.purple)
                 }
                 .help("Populate DB with random data")
                 
@@ -66,7 +63,7 @@ struct ContentView: View {
                     }
                 }) {
                     Label("Nuke DB", systemImage: "flame.fill")
-                        .foregroundColor(.red)
+                        .foregroundStyle(.red)
                 }
                 .help("Instantly wipe DB and images without asking")
             }
