@@ -164,15 +164,21 @@ extension GRDBJournalRepository {
         
         var tempRecords: [RawSeedData] = []
         
-        for dayOffset in 0..<5 {
+        let dayOffsets = (0..<25).map { _ in Int.random(in: 0...180) }
+        
+        for dayOffset in dayOffsets {
             guard let date = calendar.date(byAdding: .day, value: -dayOffset, to: today) else { continue }
+            let startOfDay = calendar.startOfDay(for: date)
             
-            for i in 0..<3 {
+            let entriesCount = Int.random(in: 4...8)
+            
+            for i in 0..<entriesCount {
                 let tag1 = sampleTags.randomElement()!
                 let tag2 = sampleTags.randomElement()!
-                let text = "Debug trade note \(i) for \(date.formatted(.dateTime.weekday().day())): Watched \(tag1) closely. Felt a bit of \(tag2)."
+                let text = "Debug trade note \(i) for \(date.formatted(.dateTime.month().day().year())): Watched \(tag1) closely. Felt a bit of \(tag2)."
                 
-                let entryTimestamp = date.addingTimeInterval(TimeInterval(i * 3600 + 1000))
+                let randomSeconds = TimeInterval(Int.random(in: 28800...57600))
+                let entryTimestamp = startOfDay.addingTimeInterval(randomSeconds)
                 
                 // Safe to use main-actor parser & dayCalculator here
                 let tradingDay = dayCalculator.getTradingDay(for: entryTimestamp)
