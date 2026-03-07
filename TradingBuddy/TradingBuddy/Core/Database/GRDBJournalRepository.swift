@@ -173,25 +173,64 @@ extension GRDBJournalRepository {
     public func debugPopulate() async throws {
         let calendar = Calendar.current
         let today = Date()
-        let sampleTags = AppConstants.Debug.sampleTags
+        let messages = DebugSeedData.messages.shuffled() // Randomize order every time
         
         var tempRecords: [RawSeedData] = []
+        var messageIndex = 0
         
-        let recentOffsets = (0..<5).map { _ in Int.random(in: 0...20) }
-        let historyOffsets = (0..<35).map { _ in Int.random(in: 30...1000) }
-        let allOffsets = Array(Set(recentOffsets + historyOffsets)).sorted(by: >)
+        // Distribution Strategy:
+        // 1. Recent: Last 7 days get ~50% of messages (heavier volume)
+        // 2. History: Last 90 days get ~50% of messages (scattered)
         
-        for dayOffset in allOffsets {
+        let recentDays = (0..<7).map { $0 }
+        let historyDays = (7..<90).map { $0 }
+        
+        // Populate Recent (High Volume)
+        for dayOffset in recentDays {
             guard let date = calendar.date(byAdding: .day, value: -dayOffset, to: today) else { continue }
             let startOfDay = calendar.startOfDay(for: date)
             
-            let entriesCount = Int.random(in: 2...6)
+            // 3-8 messages per recent day
+            let dailyVolume = Int.random(in: 3...8)
             
-            for i in 0..<entriesCount {
-                let tag1 = sampleTags.randomElement()!
-                let tag2 = sampleTags.randomElement()!
-                let dateString = date.formatted(.dateTime.year().month().day())
-                let text = String(format: AppConstants.Debug.sampleTextFormat, i, dateString, tag1, tag2)
+            for _ in 0..<dailyVolume {
+                if messageIndex >= messages.count { messageIndex = 0 } // Recycle if needed
+                let text = messages[messageIndex]
+                messageIndex += 1
+                
+                // Random time between 8:00 AM and 4:00 PM
+                let randomSeconds = TimeInterval(Int.random(in: 28800...57600))
+                let entryTimestamp = startOfDay.addingTimeInterval(randomSeconds)
+                
+                let tradingDay = dayCalculator.getTradingDay(for: entryTimestamp)
+                let parsedTags = parser.extractTags(from: text)
+                let rawTags = parsedTags.map { RawSeedTag(id: $0.id, type: $0.type) }
+                
+                tempRecords.append(RawSeedData(
+                    id: UUID().uuidString,
+                    text: text,
+                    timestamp: entryTimestamp,
+                    tradingDay: tradingDay,
+                    tags: rawTags
+                ))
+            }
+        }
+        
+        // Populate History (Sparse Volume)
+        // Pick ~15 random days from history to populate
+        let selectedHistoryDays = historyDays.shuffled().prefix(15)
+        
+        for dayOffset in selectedHistoryDays {
+            guard let date = calendar.date(byAdding: .day, value: -dayOffset, to: today) else { continue }
+            let startOfDay = calendar.startOfDay(for: date)
+            
+            // 1-3 messages per historical day
+            let dailyVolume = Int.random(in: 1...3)
+            
+            for _ in 0..<dailyVolume {
+                if messageIndex >= messages.count { messageIndex = 0 }
+                let text = messages[messageIndex]
+                messageIndex += 1
                 
                 let randomSeconds = TimeInterval(Int.random(in: 28800...57600))
                 let entryTimestamp = startOfDay.addingTimeInterval(randomSeconds)
@@ -210,7 +249,7 @@ extension GRDBJournalRepository {
             }
         }
         
-        let recordsToInsert = tempRecords
+        let recordsToInsert = tempRecords.sorted { $0.timestamp < $1.timestamp }
         
         try await appDb.dbWriter.write { db in
             for record in recordsToInsert {
@@ -224,11 +263,19 @@ extension GRDBJournalRepository {
                 try newEntry.insert(db)
                 
                 for rt in record.tags {
-                    let tag = Tag(id: rt.id, type: rt.type, lastUsed: newEntry.timestamp)
-                    try? tag.save(db)
+                    // Update tag lastUsed if it's newer
+                    if var existingTag = try Tag.fetchOne(db, key: rt.id) {
+                        if record.timestamp > existingTag.lastUsed {
+                            existingTag.lastUsed = record.timestamp
+                            try existingTag.update(db)
+                        }
+                    } else {
+                        let tag = Tag(id: rt.id, type: rt.type, lastUsed: record.timestamp)
+                        try tag.insert(db)
+                    }
                     
-                    let entryTag = EntryTag(entryId: newEntry.id, tagId: tag.id)
-                    try? entryTag.insert(db)
+                    let entryTag = EntryTag(entryId: newEntry.id, tagId: rt.id)
+                    try entryTag.insert(db)
                 }
             }
         }
