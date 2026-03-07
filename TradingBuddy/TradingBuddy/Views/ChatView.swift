@@ -6,14 +6,14 @@
 //
 
 import SwiftUI
+import AppKit
 
 struct ChatView: View {
     @Environment(ChatViewModel.self) private var viewModel
-    @State private var isHoveringImage: Bool = false
     @State private var editingEntryId: String? = nil
     @State private var editingText: String = ""
     @State private var previewImageURL: URL? = nil
-    @State private var previewPendingImage: NSImage? = nil // <-- NEW: State for pending preview
+    @State private var previewPendingImage: NSImage? = nil
     
     var body: some View {
         @Bindable var bindableViewModel = viewModel
@@ -37,62 +37,59 @@ struct ChatView: View {
                             .id(entry.id)
                         }
                     }
-                    .padding()
+                    .padding(20)
                 }
-                // Auto-scroll to bottom when new messages arrive
                 .onChange(of: viewModel.filteredEntries.count) { _, _ in
                     if let last = viewModel.filteredEntries.last {
                         withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
                     }
                 }
             }
+            // A subtle background for the timeline to contrast the bright chat bubbles
+            .background(Color(nsColor: .windowBackgroundColor).opacity(0.4))
             
             Divider()
             
             // 2. Floating Input Area
             VStack(alignment: .leading, spacing: 0) {
-                // Unified floating background container
-                VStack(alignment: .leading, spacing: 0) {
+                
+                // Unified Messages-style pill container
+                VStack(alignment: .leading, spacing: 8) {
                     
-                    // Thumbnail Section (Only shows if there is an image)
+                    // Attached Thumbnail
                     if let pendingImage = viewModel.pendingImage {
-                        // NEW: Wrap the thumbnail in a Button to trigger the preview
                         Button(action: {
                             previewPendingImage = pendingImage
                         }) {
                             Image(nsImage: pendingImage)
                                 .resizable()
                                 .scaledToFill()
-                                .frame(width: 64, height: 64)
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                .frame(width: 56, height: 56)
+                                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                        .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+                                )
                         }
                         .buttonStyle(.plain)
                         .overlay(alignment: .topTrailing) {
-                            // Hover-only 'X' button
-                            if isHoveringImage {
-                                Button(action: { viewModel.pendingImage = nil }) {
-                                    Image(systemName: "xmark")
-                                        .font(.system(size: 10, weight: .bold))
-                                        .foregroundColor(.white)
-                                        .padding(6)
-                                        .background(Color.black.opacity(0.6))
-                                        .clipShape(Circle())
-                                }
-                                .buttonStyle(.plain)
-                                .padding(4)
+                            // Native multi-color badge
+                            Button(action: { viewModel.pendingImage = nil }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .symbolRenderingMode(.palette)
+                                    .foregroundStyle(.white, Color.gray.opacity(0.95))
+                                    .font(.system(size: 16))
                             }
-                        }
-                        .onHover { hovering in
-                            withAnimation(.easeInOut(duration: 0.15)) {
-                                isHoveringImage = hovering
-                            }
+                            .buttonStyle(.plain)
+                            .offset(x: 6, y: -6)
+                            .help("Remove Attachment")
                         }
                         .padding(.top, 12)
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal, 14)
                     }
                     
-                    // Text Input & Send Button Section
-                    HStack(alignment: .bottom) {
+                    // Text Input & Send Button
+                    HStack(alignment: .bottom, spacing: 12) {
                         PasteboardTextView(
                             text: $bindableViewModel.inputText,
                             onImagePasted: { image in
@@ -100,31 +97,32 @@ struct ChatView: View {
                             },
                             onSubmit: { send() }
                         )
-                        .frame(minHeight: 24, maxHeight: 150)
+                        .frame(minHeight: 22, maxHeight: 150)
                         .padding(.vertical, 12)
                         
-                        // Send Button
+                        // Action Button
                         Button(action: send) {
-                            Image(systemName: "paperplane.fill")
-                                .font(.system(size: 16))
-                            // Dim the button if there's no text and no image
-                                .foregroundColor(viewModel.inputText.isEmpty && viewModel.pendingImage == nil ? .gray : .accentColor)
-                                .padding(.bottom, 12)
+                            Image(systemName: "arrow.up.circle.fill")
+                                .font(.system(size: 26))
+                                .foregroundColor(viewModel.inputText.isEmpty && viewModel.pendingImage == nil ? Color.gray.opacity(0.3) : .accentColor)
                         }
                         .buttonStyle(.plain)
-                        // Prevent sending if totally empty
                         .disabled(viewModel.inputText.isEmpty && viewModel.pendingImage == nil)
+                        .padding(.bottom, 10)
                     }
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, 14)
                 }
-                .background(Color(nsColor: .controlBackgroundColor))
-                .clipShape(RoundedRectangle(cornerRadius: 20))
+                .background(Color(nsColor: .textBackgroundColor))
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
                 )
-                .padding() // Padding from the main window edges to make it "float"
+                .shadow(color: Color.black.opacity(0.03), radius: 6, x: 0, y: 3)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
             }
+            .background(Color(nsColor: .windowBackgroundColor))
         }
         .sheet(isPresented: Binding(
             get: { editingEntryId != nil },
@@ -161,14 +159,12 @@ struct ChatView: View {
             .padding()
             .frame(width: 400, height: 250)
         }
-        // POST-SEND IMAGE PREVIEW SHEET (URL)
         .sheet(isPresented: Binding(
             get: { previewImageURL != nil },
             set: { if !$0 { previewImageURL = nil } }
         )) {
             if let url = previewImageURL {
                 VStack(spacing: 0) {
-                    // Top Bar with Close Button
                     HStack {
                         Spacer()
                         Button(action: { previewImageURL = nil }) {
@@ -184,11 +180,8 @@ struct ChatView: View {
                         .keyboardShortcut(.cancelAction)
                     }
                     
-                    // The giant image
                     AsyncImage(url: url) { image in
-                        image
-                            .resizable()
-                            .scaledToFit()
+                        image.resizable().scaledToFit()
                     } placeholder: {
                         ProgressView()
                     }
@@ -197,14 +190,12 @@ struct ChatView: View {
                 }
             }
         }
-        // PRE-SEND IMAGE PREVIEW SHEET (NSImage)
         .sheet(isPresented: Binding(
             get: { previewPendingImage != nil },
             set: { if !$0 { previewPendingImage = nil } }
         )) {
             if let nsImage = previewPendingImage {
                 VStack(spacing: 0) {
-                    // Top Bar with Close Button
                     HStack {
                         Spacer()
                         Button(action: { previewPendingImage = nil }) {
@@ -220,7 +211,6 @@ struct ChatView: View {
                         .keyboardShortcut(.cancelAction)
                     }
                     
-                    // The giant image
                     Image(nsImage: nsImage)
                         .resizable()
                         .scaledToFit()
@@ -228,15 +218,12 @@ struct ChatView: View {
                 }
             }
         }
-        // 3. Top Toolbar & Search
         .navigationTitle(
             viewModel.viewedTag != nil
             ? "Tag: \(viewModel.viewedTag!)"
             : viewModel.viewedDay.formatted(.dateTime.month().day().year())
         )
         .searchable(text: $bindableViewModel.searchText, prompt: "Search...")
-        
-        // 4. Alert Interception
         .alert(
             "Notice",
             isPresented: $bindableViewModel.showAlert,
@@ -291,7 +278,6 @@ struct MessageBubble: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            // HEADER: Timestamp
             HStack {
                 Text(entry.timestamp, format: .dateTime.hour().minute().second())
                     .font(.caption.monospacedDigit())
@@ -301,9 +287,7 @@ struct MessageBubble: View {
             }
             .padding(.bottom, 2)
             
-            // CONTENT
             VStack(alignment: .leading, spacing: 12) {
-                // Image
                 if let imagePath = entry.imagePath {
                     let imageURL = storage.getFileURL(for: imagePath)
                     Button(action: { onImageTap(imageURL) }) {
@@ -327,23 +311,20 @@ struct MessageBubble: View {
                     .buttonStyle(.plain)
                 }
                 
-                // Text
                 if !entry.text.isEmpty {
                     Text(formatText(entry.text))
                         .textSelection(.enabled)
-                        .lineSpacing(4) // Better readability
+                        .lineSpacing(4)
                 }
             }
         }
         .padding(16)
-        // NATIVE MAC STYLING
         .background(Color(nsColor: .controlBackgroundColor))
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
         )
-        // Subtle drop shadow for depth
         .shadow(color: Color.black.opacity(0.03), radius: 3, x: 0, y: 1)
         .contextMenu {
             Button("Copy Text") {
