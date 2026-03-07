@@ -1,11 +1,3 @@
-//
-//  AppStoragePaths.swift
-//  TradingBuddy
-//
-//  Created by Shai Kalev on 3/7/26.
-//
-
-
 import Foundation
 
 public enum AppStoragePaths {
@@ -37,5 +29,13 @@ public enum AppStoragePaths {
         }
         
         return imagesURL
+    }
+    
+    public static var userDefaultsSuiteName: String? {
+        #if DEBUG
+        return "io.shkalash.TradingBuddy.debug"
+        #else
+        return nil // Uses standard defaults in production
+        #endif
     }
 }
