@@ -34,9 +34,14 @@ public struct RegexMessageParser: MessageParser {
         
         return matches.compactMap { match in
             guard let range = Range(match.range, in: text) else { return nil }
-            let tagString = String(text[range])
-            // Standardize tags to uppercase for Futures/Tickers, lowercase for Topics
-            let normalizedId = type == .topic ? tagString.lowercased() : tagString.uppercased()
+            var tagString = String(text[range])
+            
+            if type == .topic && tagString.hasPrefix("#") {
+                tagString = String(tagString.dropFirst())
+            }
+            
+            // Standardize tags to uppercase for Futures/Tickers
+            let normalizedId = type == .topic ? tagString : tagString.uppercased()
             return ParsedTag(id: normalizedId, type: type)
         }
     }
