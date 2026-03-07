@@ -290,42 +290,68 @@ struct MessageBubble: View {
     private let storage = LocalImageStorageService()
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(entry.timestamp, format: .dateTime.hour().minute().second())
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 10) {
+            // HEADER: Timestamp
+            HStack {
+                Text(entry.timestamp, format: .dateTime.hour().minute().second())
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.tertiary)
+                
+                Spacer()
+            }
+            .padding(.bottom, 2)
             
-            VStack(alignment: .leading, spacing: 8) {
+            // CONTENT
+            VStack(alignment: .leading, spacing: 12) {
+                // Image
                 if let imagePath = entry.imagePath {
                     let imageURL = storage.getFileURL(for: imagePath)
                     Button(action: { onImageTap(imageURL) }) {
                         AsyncImage(url: imageURL) { image in
-                            image.resizable().scaledToFit().frame(maxHeight: 300).cornerRadius(4)
+                            image
+                                .resizable()
+                                .scaledToFit()
+                                .frame(maxHeight: 350)
+                                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                        .strokeBorder(Color.primary.opacity(0.1), lineWidth: 1)
+                                )
                         } placeholder: {
-                            ProgressView().frame(maxWidth: 300, minHeight: 100)
+                            ProgressView()
+                                .frame(maxWidth: .infinity, minHeight: 150)
+                                .background(Color.primary.opacity(0.05))
+                                .cornerRadius(6)
                         }
-                    }.buttonStyle(.plain)
+                    }
+                    .buttonStyle(.plain)
                 }
                 
+                // Text
                 if !entry.text.isEmpty {
                     Text(formatText(entry.text))
                         .textSelection(.enabled)
+                        .lineSpacing(4) // Better readability
                 }
             }
-            .padding(12)
-            .background(Color.accentColor.opacity(0.1))
-            .cornerRadius(8)
-            .contextMenu {
-                Button("Copy Text") {
-                    let pasteboard = NSPasteboard.general
-                    pasteboard.clearContents()
-                    pasteboard.setString(entry.text, forType: .string)
-                }
-                
-                Button("Edit Message") {
-                    onEdit(entry.id, entry.text)
-                }
+        }
+        .padding(16)
+        // NATIVE MAC STYLING
+        .background(Color(nsColor: .controlBackgroundColor))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
+        )
+        // Subtle drop shadow for depth
+        .shadow(color: Color.black.opacity(0.03), radius: 3, x: 0, y: 1)
+        .contextMenu {
+            Button("Copy Text") {
+                let pasteboard = NSPasteboard.general
+                pasteboard.clearContents()
+                pasteboard.setString(entry.text, forType: .string)
             }
+            Button("Edit Message") { onEdit(entry.id, entry.text) }
         }
     }
     
@@ -343,12 +369,11 @@ struct MessageBubble: View {
             if let regex = try? NSRegularExpression(pattern: pattern) {
                 let matches = regex.matches(in: rawText, range: NSRange(location: 0, length: nsString.length))
                 for match in matches {
-                    // Accurately target the exact character range in the string
                     if let swiftRange = Range(match.range, in: rawText),
                        let attrRange = Range<AttributedString.Index>(swiftRange, in: attributed) {
                         
                         attributed[attrRange].foregroundColor = colorService.getColor(for: type)
-                        attributed[attrRange].font = .system(.body, design: .monospaced, weight: .bold)
+                        attributed[attrRange].font = .system(.body, design: .monospaced, weight: .semibold)
                     }
                 }
             }
