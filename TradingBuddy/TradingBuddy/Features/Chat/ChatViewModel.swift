@@ -32,12 +32,27 @@ public final class ChatViewModel {
     
     public var entries: [JournalEntry] = []
     public var inputText: String = ""
-    public var searchText: String = ""
+    
+    private var _searchText: String = ""
+    public var searchText: String {
+        get { _searchText }
+        set {
+            if _searchText != newValue {
+                _searchText = newValue
+                clearHighlight()
+            }
+        }
+    }
+    
     public var pendingImage: NSImage? = nil
     
     public var viewedDay: Date
     public var viewedTag: String? = nil
     public var activeTradingDay: Date
+    
+    public var highlightedMessageId: String? = nil
+    public var pendingScrollId: String? = nil
+    private var highlightTask: Task<Void, Never>? = nil
     
     public var showAlert: Bool = false
     public var activeAlert: AlertType? = nil
@@ -75,6 +90,7 @@ public final class ChatViewModel {
     
     @MainActor
     public func load(day: Date) async {
+        clearHighlight()
         self.viewedDay = day
         self.viewedTag = nil
         self.activeTradingDay = dayCalculator.getTradingDay(for: timeProvider.now)
@@ -87,6 +103,7 @@ public final class ChatViewModel {
 
     @MainActor
     public func load(tag: String) async {
+        clearHighlight()
         self.viewedTag = tag
         self.activeTradingDay = dayCalculator.getTradingDay(for: timeProvider.now)
         do {
@@ -154,6 +171,55 @@ public final class ChatViewModel {
         } catch {
             print("ChatViewModel: Failed to update message: \(error)")
         }
+    }
+    
+    @MainActor
+    public func jumpToContext(for entry: JournalEntry) async {
+        clearHighlight()
+        self._searchText = ""
+        self.viewedDay = entry.tradingDay
+        self.viewedTag = nil
+        
+        // 1. Load data
+        do {
+            self.entries = try await repository.entries(for: entry.tradingDay)
+        } catch {
+            print("ChatViewModel: Failed to load jump entries: \(error)")
+            return
+        }
+        
+        // 2. Run the sequenced jump animation in a single managed task
+        highlightTask = Task {
+            // Scroll first
+            await MainActor.run { self.pendingScrollId = entry.id }
+            
+            // Wait for scroll to stabilize (Reduced delay)
+            try? await Task.sleep(nanoseconds: 250_000_000) 
+            
+            if Task.isCancelled { return }
+            
+            // Start Flash
+            await MainActor.run {
+                self.highlightedMessageId = entry.id
+                self.pendingScrollId = nil
+            }
+            
+            // Flash for exactly 0.8 seconds (Shortened)
+            try? await Task.sleep(nanoseconds: 800_000_000) 
+            
+            if !Task.isCancelled {
+                await MainActor.run {
+                    self.highlightedMessageId = nil
+                }
+            }
+        }
+    }
+    
+    public func clearHighlight() {
+        highlightTask?.cancel()
+        highlightTask = nil
+        highlightedMessageId = nil
+        pendingScrollId = nil
     }
 
     // MARK: - Alert Handlers

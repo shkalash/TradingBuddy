@@ -28,6 +28,9 @@ struct ChatView: View {
         @Bindable var bindableViewModel = viewModel
         
         VStack(spacing: 0) {
+            // Segment the list from the navigation/search header
+            Divider()
+            
             messageFeed
             
             Divider()
@@ -53,6 +56,8 @@ struct ChatView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 16) {
                     ForEach(viewModel.filteredEntries) { entry in
+                        let isHighlighted = viewModel.highlightedMessageId == entry.id
+                        
                         MessageBubble(
                             entry: entry,
                             onEdit: { id, text in
@@ -63,16 +68,43 @@ struct ChatView: View {
                             onImageTap: { url in
                                 previewImageURL = url
                                 isShowingImagePreview = true
-                            }
+                            },
+                            onJumpToContext: (viewModel.viewedTag != nil || !viewModel.searchText.isEmpty) ? {
+                                Task { await viewModel.jumpToContext(for: entry) }
+                            } : nil
                         )
                         .id(entry.id)
+                        .padding(4)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(Color.accentColor, lineWidth: 4)
+                                .opacity(isHighlighted ? 1 : 0)
+                                .scaleEffect(isHighlighted ? 1.01 : 1.0)
+                                // Pulsing at double speed (0.2s duration)
+                                .animation(isHighlighted ? .easeInOut(duration: 0.2).repeatCount(3, autoreverses: true) : .easeInOut(duration: 0.2), value: isHighlighted)
+                        )
                     }
                 }
-                .padding(20)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
+                .padding(.top, 12) // Ensure top messages aren't hidden by header
             }
             .onChange(of: viewModel.filteredEntries.count) { _, _ in
-                if let last = viewModel.filteredEntries.last {
+                if viewModel.highlightedMessageId == nil && viewModel.pendingScrollId == nil, let last = viewModel.filteredEntries.last {
                     withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
+                }
+            }
+            .onChange(of: viewModel.pendingScrollId) { _, newId in
+                if let id = newId {
+                    // Stage 1: Immediate jump
+                    proxy.scrollTo(id, anchor: .center)
+                    
+                    // Stage 2: Fast animated scroll to stabilize
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            proxy.scrollTo(id, anchor: .center)
+                        }
+                    }
                 }
             }
         }
