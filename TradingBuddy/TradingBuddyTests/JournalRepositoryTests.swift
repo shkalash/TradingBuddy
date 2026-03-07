@@ -120,4 +120,17 @@ struct JournalRepositoryTests {
             #expect(linkCount == 0)
         }
     }
+
+    @Test("Saving an entry with an image path persists the path correctly")
+    func testSaveEntryWithImage() async throws {
+        let (repo, _, _) = try makeSUT()
+        
+        let imagePath = "2026-03-07/test_image.png"
+        let entry = try await repo.saveEntry(text: "Entry with image", imagePath: imagePath)
+        
+        #expect(entry.imagePath == imagePath)
+        
+        let entries = try await repo.entries(for: entry.tradingDay)
+        #expect(entries.first?.imagePath == imagePath)
+    }
 }

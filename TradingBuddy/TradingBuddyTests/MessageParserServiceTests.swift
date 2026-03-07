@@ -48,12 +48,35 @@ struct MessageParserServiceTests {
 
     @Test("Ignores tags embedded inside other words")
     func testInvalidTags() {
-        // \B regex should prevent matching "email@domain.com" or a slash in a web URL
+        // (?<!\S) regex should prevent matching "email@domain.com" or a slash in a web URL
         let text = "Check out https://google.com or email me. That cost $50."
         let tags = parser.extractTags(from: text)
         
         // $50 is a valid regex match for our current setup if we aren't careful,
-        // BUT our regex \B\$[A-Za-z]+ requires LETTERS after the $. So $50 is ignored.
+        // BUT our regex (?<!\S)\$[A-Za-z]+ requires LETTERS after the $. So $50 is ignored.
         #expect(tags.isEmpty)
+    }
+
+    @Test("Handles consecutive tags correctly")
+    func testConsecutiveTags() {
+        let text = "/ES /NQ $AAPL $TSLA #one #two"
+        let tags = parser.extractTags(from: text)
+        
+        #expect(tags.contains(ParsedTag(id: "/ES", type: .future)))
+        #expect(tags.contains(ParsedTag(id: "/NQ", type: .future)))
+        #expect(tags.contains(ParsedTag(id: "$AAPL", type: .ticker)))
+        #expect(tags.contains(ParsedTag(id: "$TSLA", type: .ticker)))
+        #expect(tags.contains(ParsedTag(id: "#one", type: .topic)))
+        #expect(tags.contains(ParsedTag(id: "#two", type: .topic)))
+    }
+
+    @Test("Handles underscores in topic tags")
+    func testUnderscoresInTopics() {
+        let text = "This is a #great_trade and a #win_win."
+        let tags = parser.extractTags(from: text)
+        
+        #expect(tags.count == 2)
+        #expect(tags.contains(ParsedTag(id: "#great_trade", type: .topic)))
+        #expect(tags.contains(ParsedTag(id: "#win_win", type: .topic)))
     }
 }
