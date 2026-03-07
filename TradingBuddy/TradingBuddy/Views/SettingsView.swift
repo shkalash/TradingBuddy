@@ -166,8 +166,16 @@ struct GeneralSettingsTab: View {
         }
         .padding(20)
         .confirmationDialog("Are you absolutely sure?", isPresented: $showDeleteConfirmation) {
-            Button("Delete Database & All Saved Images", role: .destructive) {}
-            Button("Delete Database Only", role: .destructive) {}
+            Button("Delete Database & All Saved Images", role: .destructive) {
+                Task {
+                    try? await repository.clearDatabaseAndImages()
+                }
+            }
+            Button("Delete Database Only", role: .destructive) {
+                Task {
+                    try? await repository.clearDatabaseOnly()
+                }
+            }
             Button("Cancel", role: .cancel) {}
         }
     }
@@ -183,13 +191,14 @@ struct GeneralSettingsTab: View {
     }
     
     class PreviewRepo: JournalRepository {
+        func clearDatabaseOnly() async throws {}
+        func clearDatabaseAndImages() async throws {}
         func saveEntry(text: String, imagePath: String?) async throws -> JournalEntry { JournalEntry(id: "1", text: "", timestamp: Date(), tradingDay: Date()) }
         func updateEntry(id: String, newText: String) async throws {}
         func entries(for day: Date) async throws -> [JournalEntry] { [] }
         func allTradingDays() async throws -> [Date] { [] }
         func allTags() async throws -> [Tag] { [Tag(id: "/ES", type: .future, lastUsed: Date()), Tag(id: "tilt", type: .topic, lastUsed: Date())] }
         func entries(forTag tagId: String) async throws -> [JournalEntry] { [] }
-        func clearDatabase() async throws {}
     }
     
     return SettingsView(repository: PreviewRepo(), imageStorage: PreviewImageStorage())
