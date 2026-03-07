@@ -3,62 +3,68 @@ import GRDB
 
 @main
 struct TradingBuddyApp: App {
+    let repository: JournalRepository
+    let imageStorage: ImageStorageService
+    
     @State private var viewModel: ChatViewModel
-    private let repository: JournalRepository
-    private let imageStorage = LocalImageStorageService()
-    private let router = AppRouter()
+    @State private var router: AppRouter
+    @State private var colorService = TagColorService()
+    
     init() {
-        // Setup Database Path
-        let appSupportURL = try! FileManager.default.url(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: true
-        )
+        // 1. Initialize the Image Storage FIRST
+        let storage = LocalImageStorageService()
+        self.imageStorage = storage
+        
+        // 2. Initialize the Database Setup
+        // (Ensuring the TradingBuddy folder exists in Application Support)
+        let appSupportURL = try! FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
         let appDirectory = appSupportURL.appendingPathComponent("TradingBuddy", isDirectory: true)
         try? FileManager.default.createDirectory(at: appDirectory, withIntermediateDirectories: true)
         
         let dbURL = appDirectory.appendingPathComponent("journal.sqlite")
+        let dbQueue = try! DatabaseQueue(path: dbURL.path)
+        let appDb = try! AppDatabase(dbQueue)
         
-        // Initialize GRDB Pool and Schema
-        let dbPool = try! DatabasePool(path: dbURL.path)
-        let appDb = try! AppDatabase(dbPool)
-        
-        // Initialize Services
         let timeProvider = SystemTimeProvider()
         let dayCalculator = ChicagoTradingDayService()
         let parser = RegexMessageParser()
-        let preferences = AppPreferencesService()
         
-        self.repository = GRDBJournalRepository(
+        let repo = GRDBJournalRepository(
             appDb: appDb,
             timeProvider: timeProvider,
             dayCalculator: dayCalculator,
             parser: parser
         )
+        self.repository = repo
         
-        // Inject into ViewModel
+        // 3. Initialize the ViewModel
+        let prefs = AppPreferencesService()
+        let initialRouter = AppRouter()
+        
         let vm = ChatViewModel(
-            repository: self.repository,
+            repository: repo,
             timeProvider: timeProvider,
             dayCalculator: dayCalculator,
-            preferences: preferences,
-            router: router,
-            imageStorage: imageStorage
+            preferences: prefs,
+            router: initialRouter,
+            imageStorage: storage
         )
         
-        _viewModel = State(initialValue: vm)
+        self._viewModel = State(wrappedValue: vm)
+        self._router = State(wrappedValue: initialRouter)
     }
     
     var body: some Scene {
         WindowGroup {
-            ContentView(repository: repository,imageStorage: imageStorage)
+            ContentView(repository: repository, imageStorage: imageStorage)
                 .environment(viewModel)
                 .environment(router)
+                .environment(colorService)
         }
         
         Settings {
             SettingsView(repository: repository, imageStorage: imageStorage)
+                .environment(colorService)
         }
     }
 }

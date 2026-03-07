@@ -286,6 +286,7 @@ struct MessageBubble: View {
     var onEdit: (String, String) -> Void
     var onImageTap: (URL) -> Void
     
+    @Environment(TagColorService.self) private var colorService 
     private let storage = LocalImageStorageService()
     
     var body: some View {
@@ -297,27 +298,18 @@ struct MessageBubble: View {
             VStack(alignment: .leading, spacing: 8) {
                 if let imagePath = entry.imagePath {
                     let imageURL = storage.getFileURL(for: imagePath)
-                    
-                    // Wrap the image in a button so it's clickable
-                    Button(action: {
-                        onImageTap(imageURL)
-                    }) {
+                    Button(action: { onImageTap(imageURL) }) {
                         AsyncImage(url: imageURL) { image in
-                            image
-                                .resizable()
-                                .scaledToFit()
-                                .frame(maxHeight: 300)
-                                .cornerRadius(4)
+                            image.resizable().scaledToFit().frame(maxHeight: 300).cornerRadius(4)
                         } placeholder: {
-                            ProgressView()
-                                .frame(maxWidth: 300, minHeight: 100)
+                            ProgressView().frame(maxWidth: 300, minHeight: 100)
                         }
-                    }
-                    .buttonStyle(.plain)
+                    }.buttonStyle(.plain)
                 }
                 
                 if !entry.text.isEmpty {
-                    Text(entry.text)
+                    // <-- CHANGED: Now uses the rich text formatter
+                    Text(formatText(entry.text))
                         .textSelection(.enabled)
                 }
             }
@@ -325,10 +317,35 @@ struct MessageBubble: View {
             .background(Color.accentColor.opacity(0.1))
             .cornerRadius(8)
             .contextMenu {
-                Button("Edit Message") {
-                    onEdit(entry.id, entry.text)
+                Button("Edit Message") { onEdit(entry.id, entry.text) }
+            }
+        }
+    }
+    
+    private func formatText(_ rawText: String) -> AttributedString {
+        var attributed = AttributedString(rawText)
+        let nsString = rawText as NSString
+        
+        let patterns: [(String, TagType)] = [
+            ("(?<!\\S)/[A-Za-z0-9]+", .future),
+            ("(?<!\\S)\\$[A-Za-z]+", .ticker),
+            ("(?<!\\S)#[A-Za-z0-9_]+", .topic)
+        ]
+        
+        for (pattern, type) in patterns {
+            if let regex = try? NSRegularExpression(pattern: pattern) {
+                let matches = regex.matches(in: rawText, range: NSRange(location: 0, length: nsString.length))
+                for match in matches {
+                    // Accurately target the exact character range in the string
+                    if let swiftRange = Range(match.range, in: rawText),
+                       let attrRange = Range<AttributedString.Index>(swiftRange, in: attributed) {
+                        
+                        attributed[attrRange].foregroundColor = colorService.getColor(for: type)
+                        attributed[attrRange].font = .system(.body, design: .monospaced, weight: .bold)
+                    }
                 }
             }
         }
+        return attributed
     }
 }

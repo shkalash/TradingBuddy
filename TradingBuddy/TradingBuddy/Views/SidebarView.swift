@@ -3,6 +3,7 @@ import SwiftUI
 struct SidebarView: View {
     @Environment(AppRouter.self) private var router
     @Environment(ChatViewModel.self) private var chatViewModel // We need this to watch for new entries
+    @Environment(TagColorService.self) private var colorService
     @State private var sidebarViewModel: SidebarViewModel
     
     init(repository: JournalRepository) {
@@ -35,33 +36,35 @@ struct SidebarView: View {
                 Section("Futures") {
                     ForEach(sidebarViewModel.futureTags, id: \.id) { tag in
                         Label(tag.id, systemImage: "chart.line.uptrend.xyaxis")
-                            .foregroundColor(.orange)
+                            .foregroundColor(colorService.getColor(for: .future))
                             .tag(NavigationSelection.tag(tag.id))
                     }
                 }
             }
             
-            // SECTION 3: TICKERS
-            if !sidebarViewModel.tickerTags.isEmpty {
-                Section("Tickers") {
-                    ForEach(sidebarViewModel.tickerTags, id: \.id) { tag in
-                        Label(tag.id, systemImage: "building.columns.fill")
-                            .foregroundColor(.blue)
-                            .tag(NavigationSelection.tag(tag.id))
-                    }
-                }
-            }
-            
-            // SECTION 4: TOPICS
+            // SECTION 3: TOPICS
             if !sidebarViewModel.topicTags.isEmpty {
                 Section("Topics") {
                     ForEach(sidebarViewModel.topicTags, id: \.id) { tag in
                         Label(tag.id, systemImage: "number")
-                            .foregroundColor(.purple)
+                            .foregroundColor(colorService.getColor(for: .topic))
                             .tag(NavigationSelection.tag(tag.id))
                     }
                 }
             }
+            
+            // SECTION 4: TICKERS
+            if !sidebarViewModel.tickerTags.isEmpty {
+                Section("Tickers") {
+                    ForEach(sidebarViewModel.tickerTags, id: \.id) { tag in
+                        Label(tag.id, systemImage: "building.columns.fill")
+                            .foregroundColor(colorService.getColor(for: .ticker))
+                            .tag(NavigationSelection.tag(tag.id))
+                    }
+                }
+            }
+            
+            
         }
         .navigationTitle("History")
         .task {
