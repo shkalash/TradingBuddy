@@ -11,19 +11,10 @@ struct TradingBuddyApp: App {
     @State private var colorService = TagColorService()
     
     init() {
-        // 1. Initialize the Image Storage FIRST
         let storage = LocalImageStorageService()
         self.imageStorage = storage
         
-        // 2. Initialize the Database Setup
-        // (Ensuring the TradingBuddy folder exists in Application Support)
-        let appSupportURL = try! FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-        let appDirectory = appSupportURL.appendingPathComponent("TradingBuddy", isDirectory: true)
-        try? FileManager.default.createDirectory(at: appDirectory, withIntermediateDirectories: true)
-        
-        let dbURL = appDirectory.appendingPathComponent("journal.sqlite")
-        let dbQueue = try! DatabaseQueue(path: dbURL.path)
-        let appDb = try! AppDatabase(dbQueue)
+        let appDb = try! AppDatabase.shared()
         
         let timeProvider = SystemTimeProvider()
         let dayCalculator = ChicagoTradingDayService()
@@ -37,7 +28,6 @@ struct TradingBuddyApp: App {
         )
         self.repository = repo
         
-        // 3. Initialize the ViewModel
         let prefs = AppPreferencesService()
         let initialRouter = AppRouter()
         

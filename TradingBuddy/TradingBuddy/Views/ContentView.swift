@@ -60,7 +60,7 @@ struct ContentView: View {
                 // NUKE BUTTON
                 Button(action: {
                     Task {
-                        try? await repository.clearDatabase()
+                        try? await repository.clearDatabaseOnly()
                         try? imageStorage.clearAllImages()
                         NotificationCenter.default.post(name: .databaseCleared, object: nil)
                     }
@@ -78,6 +78,12 @@ struct ContentView: View {
 
 // 1. Standalone mock dependencies for the preview
 private class PreviewRepo: JournalRepository {
+    func clearDatabaseOnly() async throws {
+    }
+    
+    func clearDatabaseAndImages() async throws {
+    }
+    
     func saveEntry(text: String, imagePath: String?) async throws -> JournalEntry {
         JournalEntry(id: "1", text: "Preview text", timestamp: Date(), tradingDay: Date())
     }

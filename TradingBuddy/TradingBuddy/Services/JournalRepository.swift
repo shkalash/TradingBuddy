@@ -1,11 +1,3 @@
-//
-//  JournalRepository.swift
-//  TradingBuddy
-//
-//  Created by Shai Kalev on 3/6/26.
-//
-
-
 import Foundation
 import GRDB
 
@@ -16,7 +8,8 @@ public protocol JournalRepository {
     func allTradingDays() async throws -> [Date]
     func allTags() async throws -> [Tag]
     func entries(forTag tagId: String) async throws -> [JournalEntry]
-    func clearDatabase() async throws
+    func clearDatabaseOnly() async throws
+    func clearDatabaseAndImages() async throws
 }
 
 public class GRDBJournalRepository: JournalRepository {
@@ -37,7 +30,6 @@ public class GRDBJournalRepository: JournalRepository {
         let calculatedDay = dayCalculator.getTradingDay(for: currentRealTime)
         let extractedTags = parser.extractTags(from: text)
         
-        // FIX: Create and modify the entry INSIDE the closure so Swift 6 doesn't complain
         let savedEntry = try await appDb.dbWriter.write { db -> JournalEntry in
             let newEntry = JournalEntry(
                 id: UUID().uuidString,
@@ -49,10 +41,9 @@ public class GRDBJournalRepository: JournalRepository {
             
             try newEntry.insert(db)
             
-            // Handle tags
             for pt in extractedTags {
                 let tag = Tag(id: pt.id, type: pt.type, lastUsed: currentRealTime)
-                try tag.save(db) // Upserts the tag
+                try tag.save(db)
                 
                 let entryTag = EntryTag(entryId: newEntry.id, tagId: tag.id)
                 try entryTag.insert(db)
@@ -71,14 +62,11 @@ public class GRDBJournalRepository: JournalRepository {
         try await appDb.dbWriter.write { db in
             guard var entry = try JournalEntry.fetchOne(db, key: id) else { return }
             
-            // 1. Update entry text
             entry.text = newText
             try entry.update(db)
             
-            // 2. Clear out old tag links for this entry
             try EntryTag.filter(Column("entryId") == id).deleteAll(db)
             
-            // 3. Re-link the new tags
             for pTag in parsedTags {
                 if var existingTag = try Tag.fetchOne(db, key: pTag.id) {
                     existingTag.lastUsed = now
@@ -105,7 +93,6 @@ public class GRDBJournalRepository: JournalRepository {
     
     public func allTradingDays() async throws -> [Date] {
         try await appDb.dbWriter.read { db in
-            // Tell GRDB to fetch Dates directly from the selected column
             let request = JournalEntry
                 .select(Column("tradingDay"))
                 .distinct()
@@ -123,23 +110,37 @@ public class GRDBJournalRepository: JournalRepository {
     
     public func entries(forTag tagId: String) async throws -> [JournalEntry] {
         try await appDb.dbWriter.read { db in
-            // This uses the 'tags' association we defined in Models.swift!
             try JournalEntry
                 .joining(required: JournalEntry.tags.filter(Column("id") == tagId))
                 .order(Column("timestamp").asc)
                 .fetchAll(db)
         }
     }
-    public func clearDatabase() async throws {
+    
+    public func clearDatabaseOnly() async throws {
         try await appDb.dbWriter.write { db in
-            // Must delete child tables first to respect foreign keys (even though cascade is on, it's safer)
             try EntryTag.deleteAll(db)
             try Tag.deleteAll(db)
             try JournalEntry.deleteAll(db)
         }
+        
+        await MainActor.run {
+            NotificationCenter.default.post(name: .databaseCleared, object: nil)
+        }
+    }
+    
+    public func clearDatabaseAndImages() async throws {
+        try await clearDatabaseOnly()
+        
+        let imagesDir = AppStoragePaths.imagesDirectory
+        if let files = try? FileManager.default.contentsOfDirectory(at: imagesDir, includingPropertiesForKeys: nil) {
+            for file in files {
+                try? FileManager.default.removeItem(at: file)
+            }
+        }
     }
 }
-// MARK: - Debug
+
 #if DEBUG
 
 struct RawSeedTag: Sendable {
@@ -164,7 +165,6 @@ extension GRDBJournalRepository {
         
         var tempRecords: [RawSeedData] = []
         
-        // 1. Generate 5 days from the CURRENT month, plus 35 random days over the last 3 years (1000 days)
         let recentOffsets = (0..<5).map { _ in Int.random(in: 0...20) }
         let historyOffsets = (0..<35).map { _ in Int.random(in: 30...1000) }
         let allOffsets = Array(Set(recentOffsets + historyOffsets)).sorted(by: >)
