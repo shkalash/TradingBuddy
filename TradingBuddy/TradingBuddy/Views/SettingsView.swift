@@ -158,9 +158,9 @@ struct GeneralSettingsTab: View {
                 Button("Open App Data Folder in Finder") { NSWorkspace.shared.open(imageStorage.getBaseDirectory()) }
                 VStack(alignment: .leading, spacing: 4) {
                     Button(role: .destructive, action: { showDeleteConfirmation = true }) {
-                        Text("Clear Entire Database...").foregroundColor(.red)
+                        Text("Clear Entire Database...").foregroundStyle(.red)
                     }
-                    Text("This action cannot be undone.").font(.caption).foregroundColor(.secondary)
+                    Text("This action cannot be undone.").font(.caption).foregroundStyle(.secondary)
                 }
             }
             Spacer()

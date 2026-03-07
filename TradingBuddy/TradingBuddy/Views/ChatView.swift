@@ -15,6 +15,10 @@ struct ChatView: View {
     @State private var previewImageURL: URL? = nil
     @State private var previewPendingImage: NSImage? = nil
     
+    @State private var isEditing = false
+    @State private var isShowingImagePreview = false
+    @State private var isShowingPendingImagePreview = false
+    
     var body: some View {
         @Bindable var bindableViewModel = viewModel
         
@@ -29,9 +33,11 @@ struct ChatView: View {
                                 onEdit: { id, text in
                                     editingText = text
                                     editingEntryId = id
+                                    isEditing = true
                                 },
                                 onImageTap: { url in
                                     previewImageURL = url
+                                    isShowingImagePreview = true
                                 }
                             )
                             .id(entry.id)
@@ -60,6 +66,7 @@ struct ChatView: View {
                     if let pendingImage = viewModel.pendingImage {
                         Button(action: {
                             previewPendingImage = pendingImage
+                            isShowingPendingImagePreview = true
                         }) {
                             Image(nsImage: pendingImage)
                                 .resizable()
@@ -104,7 +111,7 @@ struct ChatView: View {
                         Button(action: send) {
                             Image(systemName: "arrow.up.circle.fill")
                                 .font(.system(size: 26))
-                                .foregroundColor(viewModel.inputText.isEmpty && viewModel.pendingImage == nil ? Color.gray.opacity(0.3) : .accentColor)
+                                .foregroundStyle(viewModel.inputText.isEmpty && viewModel.pendingImage == nil ? Color.gray.opacity(0.3) : .accentColor)
                         }
                         .buttonStyle(.plain)
                         .disabled(viewModel.inputText.isEmpty && viewModel.pendingImage == nil)
@@ -124,10 +131,7 @@ struct ChatView: View {
             }
             .background(Color(nsColor: .windowBackgroundColor))
         }
-        .sheet(isPresented: Binding(
-            get: { editingEntryId != nil },
-            set: { if !$0 { editingEntryId = nil } }
-        )) {
+        .sheet(isPresented: $isEditing) {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Edit Message").font(.headline)
                 
@@ -141,14 +145,14 @@ struct ChatView: View {
                 
                 HStack {
                     Spacer()
-                    Button("Cancel") { editingEntryId = nil }
+                    Button("Cancel") { isEditing = false }
                         .keyboardShortcut(.cancelAction)
                     
                     Button("Save") {
                         if let id = editingEntryId {
                             Task {
                                 await viewModel.updateMessage(id: id, newText: editingText)
-                                editingEntryId = nil
+                                isEditing = false
                             }
                         }
                     }
@@ -159,18 +163,15 @@ struct ChatView: View {
             .padding()
             .frame(width: 400, height: 250)
         }
-        .sheet(isPresented: Binding(
-            get: { previewImageURL != nil },
-            set: { if !$0 { previewImageURL = nil } }
-        )) {
+        .sheet(isPresented: $isShowingImagePreview) {
             if let url = previewImageURL {
                 VStack(spacing: 0) {
                     HStack {
                         Spacer()
-                        Button(action: { previewImageURL = nil }) {
+                        Button(action: { isShowingImagePreview = false }) {
                             Image(systemName: "xmark")
                                 .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(.white)
+                                .foregroundStyle(.white)
                                 .padding(6)
                                 .background(Color.black.opacity(0.6))
                                 .clipShape(Circle())
@@ -190,18 +191,15 @@ struct ChatView: View {
                 }
             }
         }
-        .sheet(isPresented: Binding(
-            get: { previewPendingImage != nil },
-            set: { if !$0 { previewPendingImage = nil } }
-        )) {
+        .sheet(isPresented: $isShowingPendingImagePreview) {
             if let nsImage = previewPendingImage {
                 VStack(spacing: 0) {
                     HStack {
                         Spacer()
-                        Button(action: { previewPendingImage = nil }) {
+                        Button(action: { isShowingPendingImagePreview = false }) {
                             Image(systemName: "xmark")
                                 .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(.white)
+                                .foregroundStyle(.white)
                                 .padding(6)
                                 .background(Color.black.opacity(0.6))
                                 .clipShape(Circle())

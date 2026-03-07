@@ -196,7 +196,7 @@ struct TagSidebarSection: View {
                 ForEach(tags, id: \.id) { tag in
                     NavigationLink(value: NavigationSelection.tag(tag.id)) {
                         Label(tag.id, systemImage: icon)
-                            .foregroundColor(color)
+                            .foregroundStyle(color)
                     }
                 }
             } label: {
