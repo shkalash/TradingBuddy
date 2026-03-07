@@ -49,16 +49,18 @@ struct ContentView: View {
                 }
             }
         }
+#if DEBUG
         .toolbar {
             debugToolbar
         }
+#endif
     }
     
     // MARK: - Subviews
-    
+#if DEBUG
     @ToolbarContentBuilder
     private var debugToolbar: some ToolbarContent {
-#if DEBUG
+
         ToolbarItemGroup(placement: .navigation) {
             Button(action: {
                 Task {
@@ -85,8 +87,9 @@ struct ContentView: View {
             }
             .help("Instantly wipe DB and images without asking")
         }
-#endif
+
     }
+#endif
 }
 
 // MARK: - Previews
