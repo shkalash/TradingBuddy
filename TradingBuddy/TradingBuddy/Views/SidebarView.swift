@@ -106,6 +106,11 @@ struct SidebarView: View {
                 }
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .databaseUpdated)) { _ in
+            Task {
+                await fetchData()
+            }
+        }
     }
     
     // MARK: - Data Processing
