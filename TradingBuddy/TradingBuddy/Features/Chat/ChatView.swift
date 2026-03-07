@@ -1,6 +1,22 @@
 import SwiftUI
 import AppKit
 
+/// A wrapper to make URL Identifiable for SwiftUI sheets.
+struct IdentifiableURL: Identifiable {
+    let id: String
+    let url: URL
+    init(_ url: URL) {
+        self.id = url.absoluteString
+        self.url = url
+    }
+}
+
+/// A wrapper to make NSImage Identifiable for SwiftUI sheets.
+struct IdentifiableNSImage: Identifiable {
+    let id = UUID()
+    let image: NSImage
+}
+
 /// The primary interface for viewing and sending trading journal entries.
 ///
 /// **Responsibilities:**
@@ -15,12 +31,11 @@ struct ChatView: View {
     
     @State private var editingEntryId: String? = nil
     @State private var editingText: String = ""
-    @State private var previewImageURL: URL? = nil
-    @State private var previewPendingImage: NSImage? = nil
+    
+    @State private var activePreviewURL: IdentifiableURL? = nil
+    @State private var activePendingPreviewImage: IdentifiableNSImage? = nil
     
     @State private var isEditing = false
-    @State private var isShowingImagePreview = false
-    @State private var isShowingPendingImagePreview = false
     
     // MARK: - Body
     
@@ -28,7 +43,6 @@ struct ChatView: View {
         @Bindable var bindableViewModel = viewModel
         
         VStack(spacing: 0) {
-            // Segment the list from the navigation/search header
             Divider()
             
             messageFeed
@@ -38,8 +52,8 @@ struct ChatView: View {
             inputArea
         }
         .sheet(isPresented: $isEditing) { editSheet }
-        .sheet(isPresented: $isShowingImagePreview) { imagePreviewSheet }
-        .sheet(isPresented: $isShowingPendingImagePreview) { pendingImagePreviewSheet }
+        .sheet(item: $activePreviewURL) { item in imagePreviewSheet(for: item.url) }
+        .sheet(item: $activePendingPreviewImage) { item in pendingImagePreviewSheet(for: item.image) }
         .navigationTitle(navigationTitle)
         .searchable(text: $bindableViewModel.searchText, prompt: Text("chat.search.placeholder"))
         .alert(Text("chat.alert.notice.title"), isPresented: $bindableViewModel.showAlert, presenting: viewModel.activeAlert) { alert in
@@ -66,8 +80,7 @@ struct ChatView: View {
                                 isEditing = true
                             },
                             onImageTap: { url in
-                                previewImageURL = url
-                                isShowingImagePreview = true
+                                activePreviewURL = IdentifiableURL(url)
                             },
                             onJumpToContext: (viewModel.viewedTag != nil || !viewModel.searchText.isEmpty) ? {
                                 Task { await viewModel.jumpToContext(for: entry) }
@@ -80,14 +93,13 @@ struct ChatView: View {
                                 .stroke(Color.accentColor, lineWidth: 4)
                                 .opacity(isHighlighted ? 1 : 0)
                                 .scaleEffect(isHighlighted ? 1.01 : 1.0)
-                                // Pulsing at double speed (0.2s duration)
                                 .animation(isHighlighted ? .easeInOut(duration: 0.2).repeatCount(3, autoreverses: true) : .easeInOut(duration: 0.2), value: isHighlighted)
                         )
                     }
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
-                .padding(.top, 12) // Ensure top messages aren't hidden by header
+                .padding(.top, 12)
             }
             .onChange(of: viewModel.filteredEntries.count) { _, _ in
                 if viewModel.highlightedMessageId == nil && viewModel.pendingScrollId == nil, let last = viewModel.filteredEntries.last {
@@ -96,10 +108,7 @@ struct ChatView: View {
             }
             .onChange(of: viewModel.pendingScrollId) { _, newId in
                 if let id = newId {
-                    // Stage 1: Immediate jump
                     proxy.scrollTo(id, anchor: .center)
-                    
-                    // Stage 2: Fast animated scroll to stabilize
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                             proxy.scrollTo(id, anchor: .center)
@@ -188,60 +197,59 @@ struct ChatView: View {
         .frame(width: 400, height: 250)
     }
 
-    private var imagePreviewSheet: some View {
-        Group {
-            if let url = previewImageURL {
-                VStack(spacing: 0) {
-                    HStack {
-                        Spacer()
-                        Button(action: { isShowingImagePreview = false }) {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(.white)
-                                .padding(6)
-                                .background(Color.black.opacity(0.6))
-                                .clipShape(Circle())
-                        }
-                        .buttonStyle(.plain)
-                        .padding()
-                        .keyboardShortcut(.cancelAction)
-                    }
-                    AsyncImage(url: url) { image in image.resizable().scaledToFit() } placeholder: { ProgressView() }
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 20)
+    private func imagePreviewSheet(for url: URL) -> some View {
+        VStack(spacing: 0) {
+            HStack {
+                Spacer()
+                Button(action: { activePreviewURL = nil }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(6)
+                        .background(Color.black.opacity(0.6))
+                        .clipShape(Circle())
                 }
+                .buttonStyle(.plain)
+                .padding()
+                .keyboardShortcut(.cancelAction)
             }
+            AsyncImage(url: url) { image in
+                image.resizable().scaledToFit()
+            } placeholder: {
+                ProgressView()
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 20)
         }
     }
 
-    private var pendingImagePreviewSheet: some View {
-        Group {
-            if let nsImage = previewPendingImage {
-                VStack(spacing: 0) {
-                    HStack {
-                        Spacer()
-                        Button(action: { isShowingPendingImagePreview = false }) {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(.white)
-                                .padding(6)
-                                .background(Color.black.opacity(0.6))
-                                .clipShape(Circle())
-                        }
-                        .buttonStyle(.plain)
-                        .padding()
-                        .keyboardShortcut(.cancelAction)
-                    }
-                    Image(nsImage: nsImage).resizable().scaledToFit().padding(.horizontal, 20)
+    private func pendingImagePreviewSheet(for nsImage: NSImage) -> some View {
+        VStack(spacing: 0) {
+            HStack {
+                Spacer()
+                Button(action: { activePendingPreviewImage = nil }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(6)
+                        .background(Color.black.opacity(0.6))
+                        .clipShape(Circle())
                 }
+                .buttonStyle(.plain)
+                .padding()
+                .keyboardShortcut(.cancelAction)
             }
+            Image(nsImage: nsImage)
+                .resizable()
+                .scaledToFit()
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
         }
     }
 
     private func attachmentThumbnail(_ image: NSImage) -> some View {
         Button(action: {
-            previewPendingImage = image
-            isShowingPendingImagePreview = true
+            activePendingPreviewImage = IdentifiableNSImage(image: image)
         }) {
             Image(nsImage: image)
                 .resizable()
