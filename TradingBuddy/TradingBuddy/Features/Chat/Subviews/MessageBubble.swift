@@ -14,7 +14,9 @@ struct MessageBubble: View {
     let entry: JournalEntry
     var onEdit: (String, String) -> Void
     var onImageTap: (URL) -> Void
+    var onJumpToContext: (() -> Void)?
     
+    @Environment(ChatViewModel.self) private var viewModel
     @Environment(TagColorService.self) private var colorService
     private let storage = LocalImageStorageService()
     
@@ -40,15 +42,28 @@ struct MessageBubble: View {
         .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.primary.opacity(0.05), lineWidth: 1))
         .shadow(color: Color.black.opacity(0.03), radius: 3, x: 0, y: 1)
         .contextMenu { contextButtons }
+        // Double-click shortcut for jumping to context
+        .onTapGesture(count: 2) {
+            onJumpToContext?()
+        }
     }
     
     // MARK: - Components
     
     private var timestampHeader: some View {
         HStack {
-            Text(entry.timestamp, format: .dateTime.hour().minute().second())
-                .font(.caption.monospacedDigit())
-                .foregroundStyle(.tertiary)
+            HStack(spacing: 4) {
+                // If filtering (tag or search), show the full date
+                if viewModel.viewedTag != nil || !viewModel.searchText.isEmpty {
+                    Text(entry.tradingDay, format: .dateTime.month().day())
+                        .fontWeight(.semibold)
+                }
+                
+                Text(entry.timestamp, format: .dateTime.hour().minute().second())
+            }
+            .font(.caption.monospacedDigit())
+            .foregroundStyle(.tertiary)
+            
             Spacer()
         }
         .padding(.bottom, 2)
@@ -83,6 +98,10 @@ struct MessageBubble: View {
             pasteboard.setString(entry.text, forType: .string)
         }
         Button("chat.message.context.edit") { onEdit(entry.id, entry.text) }
+        
+        if let onJump = onJumpToContext {
+            Button("chat.message.context.jump") { onJump() }
+        }
     }
     
     // MARK: - Logic
