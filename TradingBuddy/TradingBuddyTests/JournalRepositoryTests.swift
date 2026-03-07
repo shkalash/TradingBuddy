@@ -1,0 +1,123 @@
+import Testing
+import Foundation
+import GRDB
+@testable import TradingBuddy
+
+final class MutableTimeProvider: TimeProvider {
+    var now: Date
+    init(now: Date) { self.now = now }
+}
+
+@MainActor // <-- This fixes all the concurrency errors!
+struct JournalRepositoryTests {
+
+    func makeSUT(now: Date = Date()) throws -> (GRDBJournalRepository, AppDatabase, MutableTimeProvider) {
+        let dbQueue = try DatabaseQueue()
+        let appDb = try AppDatabase(dbQueue)
+        let timeProvider = MutableTimeProvider(now: now)
+        let dayCalculator = ChicagoTradingDayService()
+        let parser = RegexMessageParser()
+        
+        let repo = GRDBJournalRepository(
+            appDb: appDb,
+            timeProvider: timeProvider,
+            dayCalculator: dayCalculator,
+            parser: parser
+        )
+        
+        return (repo, appDb, timeProvider)
+    }
+
+    @Test("Saving an entry extracts tags and creates correct database relations")
+    func testSaveEntry() async throws {
+        let (repo, appDb, _) = try makeSUT()
+        
+        let text = "Shorted /ES and /NQ due to #tilt"
+        let entry = try await repo.saveEntry(text: text, imagePath: nil)
+        
+        #expect(entry.text == text)
+        
+        try await appDb.dbWriter.read { db in
+            let tagsCount = try Tag.fetchCount(db)
+            #expect(tagsCount == 3)
+            
+            let linksCount = try EntryTag.fetchCount(db)
+            #expect(linksCount == 3)
+        }
+        
+        let esEntries = try await repo.entries(forTag: "/ES")
+        #expect(esEntries.count == 1)
+        #expect(esEntries.first?.id == entry.id)
+    }
+
+    @Test("Updating an entry changes text and correctly updates tag relations")
+    func testUpdateEntry() async throws {
+        let (repo, _, _) = try makeSUT()
+        
+        let entry = try await repo.saveEntry(text: "Long $AAPL", imagePath: nil)
+        
+        var aaplEntries = try await repo.entries(forTag: "$AAPL")
+        #expect(aaplEntries.count == 1)
+        
+        try await repo.updateEntry(id: entry.id, newText: "Long $TSLA actually")
+        
+        aaplEntries = try await repo.entries(forTag: "$AAPL")
+        #expect(aaplEntries.isEmpty)
+        
+        let tslaEntries = try await repo.entries(forTag: "$TSLA")
+        #expect(tslaEntries.count == 1)
+        #expect(tslaEntries.first?.id == entry.id)
+    }
+
+    @Test("Fetching entries for a specific trading day groups them correctly")
+    func testEntriesForDay() async throws {
+        let tz = TimeZone(identifier: "America/Chicago")!
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = tz
+        
+        let day1Midday = cal.date(from: DateComponents(year: 2026, month: 3, day: 5, hour: 12))!
+        let day1Evening = cal.date(from: DateComponents(year: 2026, month: 3, day: 5, hour: 19))!
+        
+        let (repo, _, timeProvider) = try makeSUT(now: day1Midday)
+        
+        _ = try await repo.saveEntry(text: "Midday trade", imagePath: nil)
+        
+        timeProvider.now = day1Evening
+        
+        _ = try await repo.saveEntry(text: "Evening post-market thoughts", imagePath: nil)
+        
+        let tradingDays = try await repo.allTradingDays()
+        #expect(tradingDays.count == 2)
+        
+        let dayCalculator = ChicagoTradingDayService()
+        let march5TradingDay = dayCalculator.getTradingDay(for: day1Midday)
+        let march6TradingDay = dayCalculator.getTradingDay(for: day1Evening)
+        
+        let march5Entries = try await repo.entries(for: march5TradingDay)
+        #expect(march5Entries.count == 1)
+        #expect(march5Entries.first?.text == "Midday trade")
+        
+        let march6Entries = try await repo.entries(for: march6TradingDay)
+        #expect(march6Entries.count == 1)
+        #expect(march6Entries.first?.text == "Evening post-market thoughts")
+    }
+
+    @Test("Clearing the database wipes all tables")
+    func testClearDatabase() async throws {
+        let (repo, appDb, _) = try makeSUT()
+        
+        _ = try await repo.saveEntry(text: "Test $AAPL", imagePath: nil)
+        
+        try await repo.clearDatabase()
+        
+        try await appDb.dbWriter.read { db in
+            let entryCount = try JournalEntry.fetchCount(db)
+            let tagCount = try Tag.fetchCount(db)
+            let linkCount = try EntryTag.fetchCount(db)
+            
+            #expect(entryCount == 0)
+            #expect(tagCount == 0)
+            #expect(linkCount == 0)
+        }
+    }
+}
