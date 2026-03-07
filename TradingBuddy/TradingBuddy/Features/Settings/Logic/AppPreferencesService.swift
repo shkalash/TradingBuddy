@@ -1,9 +1,11 @@
 import Foundation
 
 public class AppPreferencesService: PreferencesService {
-    private let defaults = UserDefaults.standard
+    private let defaults: UserDefaults
     
-    public init() {}
+    public init(defaults: UserDefaults = .init(suiteName: AppStoragePaths.userDefaultsSuiteName) ?? .standard) {
+        self.defaults = defaults
+    }
     
     public var showHistoryJumpWarning: Bool {
         get { defaults.object(forKey: "showHistoryJumpWarning") as? Bool ?? true }

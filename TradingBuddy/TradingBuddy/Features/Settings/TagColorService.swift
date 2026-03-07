@@ -1,13 +1,11 @@
 import SwiftUI
 import Observation
 
-// If your TagType isn't a String enum, this gracefully falls back to describing it
 @Observable
 public class TagColorService {
-    private let defaults = UserDefaults.standard
+    private let defaults: UserDefaults
     private let colorsKey = "tagCategoryColors"
     
-    // Keys will be "future", "ticker", "topic"
     public var colorMap: [String: String] = [:] {
         didSet {
             if let encoded = try? JSONEncoder().encode(colorMap) {
@@ -16,7 +14,8 @@ public class TagColorService {
         }
     }
     
-    public init() {
+    public init(defaults: UserDefaults = .init(suiteName: AppStoragePaths.userDefaultsSuiteName) ?? .standard) {
+        self.defaults = defaults
         if let data = defaults.data(forKey: colorsKey),
            let decoded = try? JSONDecoder().decode([String: String].self, from: data) {
             self.colorMap = decoded
@@ -29,7 +28,6 @@ public class TagColorService {
             return color
         }
         
-        // Beautiful defaults if the user hasn't set anything
         switch type {
         case .future: return .blue
         case .ticker: return .green
@@ -43,7 +41,7 @@ public class TagColorService {
     }
 }
 
-// MARK: - Color Hex Extensions
+// ... Color extension remains the same ...
 extension Color {
     init?(hex: String) {
         var hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
