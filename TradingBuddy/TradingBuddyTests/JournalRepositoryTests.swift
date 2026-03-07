@@ -108,7 +108,7 @@ struct JournalRepositoryTests {
         
         _ = try await repo.saveEntry(text: "Test $AAPL", imagePath: nil)
         
-        try await repo.clearDatabase()
+        try await repo.clearDatabaseOnly()
         
         try await appDb.dbWriter.read { db in
             let entryCount = try JournalEntry.fetchCount(db)
