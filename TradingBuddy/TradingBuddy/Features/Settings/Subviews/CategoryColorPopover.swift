@@ -23,7 +23,7 @@ struct CategoryColorPopover: View {
         VStack(alignment: .leading, spacing: 16) {
             header
             
-            ColorPicker("Color", selection: $draftColor)
+            ColorPicker(String(localized: "settings.tags.popover.picker_label", comment: "Color picker title"), selection: $draftColor)
                 .labelsHidden()
             
             footer
@@ -36,12 +36,12 @@ struct CategoryColorPopover: View {
     // MARK: - Components
     
     private var header: some View {
-        Text("Select Color").font(.headline)
+        Text("settings.tags.popover.title").font(.headline)
     }
     
     private var footer: some View {
         HStack {
-            Button("Cancel") {
+            Button("settings.tags.popover.cancel") {
                 actionTaken = true
                 closeAllWindows()
             }
@@ -49,7 +49,7 @@ struct CategoryColorPopover: View {
             
             Spacer()
             
-            Button("Apply") {
+            Button("settings.tags.popover.apply") {
                 actionTaken = true
                 colorService.setColor(draftColor, for: type)
                 closeAllWindows()

@@ -13,9 +13,9 @@ public enum AppStoragePaths {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         
         #if DEBUG
-        let folderURL = appSupport.appendingPathComponent("TradingBuddy-Debug")
+        let folderURL = appSupport.appendingPathComponent(AppConstants.Storage.debugFolder)
         #else
-        let folderURL = appSupport.appendingPathComponent("TradingBuddy")
+        let folderURL = appSupport.appendingPathComponent(AppConstants.Storage.productionFolder)
         #endif
         
         if !FileManager.default.fileExists(atPath: folderURL.path) {
@@ -26,11 +26,11 @@ public enum AppStoragePaths {
     }
     
     public static var databaseURL: URL {
-        baseDirectory.appendingPathComponent("journal.sqlite")
+        baseDirectory.appendingPathComponent(AppConstants.Storage.databaseFileName)
     }
     
     public static var imagesDirectory: URL {
-        let imagesURL = baseDirectory.appendingPathComponent("Images")
+        let imagesURL = baseDirectory.appendingPathComponent(AppConstants.Storage.imagesFolderName)
         
         if !FileManager.default.fileExists(atPath: imagesURL.path) {
             try? FileManager.default.createDirectory(at: imagesURL, withIntermediateDirectories: true)
@@ -43,7 +43,7 @@ public enum AppStoragePaths {
     
     public static var userDefaultsSuiteName: String? {
         #if DEBUG
-        return "io.shkalash.TradingBuddy.debug"
+        return "\(AppConstants.Storage.userDefaultsSuitePrefix).debug"
         #else
         return nil // Uses standard defaults in production
         #endif

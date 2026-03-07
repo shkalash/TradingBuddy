@@ -38,7 +38,7 @@ struct ContentView: View {
             }
         }
         // Listen for the clear signal from the Settings window
-        .onReceive(NotificationCenter.default.publisher(for: .databaseCleared)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: AppConstants.Notifications.databaseCleared)) { _ in
             Task {
                 // Force a reload of whatever view we are currently looking at
                 if let newSelection = router.selection {
@@ -64,7 +64,7 @@ struct ContentView: View {
                 Task {
                     if let repo = repository as? GRDBJournalRepository {
                         try? await repo.debugPopulate()
-                        NotificationCenter.default.post(name: .databaseCleared, object: nil)
+                        NotificationCenter.default.post(name: AppConstants.Notifications.databaseCleared, object: nil)
                     }
                 }
             }) {
@@ -77,7 +77,7 @@ struct ContentView: View {
                 Task {
                     try? await repository.clearDatabaseOnly()
                     try? imageStorage.clearAllImages()
-                    NotificationCenter.default.post(name: .databaseCleared, object: nil)
+                    NotificationCenter.default.post(name: AppConstants.Notifications.databaseCleared, object: nil)
                 }
             }) {
                 Label("Nuke DB", systemImage: "flame.fill")

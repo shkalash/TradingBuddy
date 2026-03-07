@@ -18,25 +18,28 @@ public protocol MessageParser {
 /// - Identifying tag patterns while avoiding false positives (e.g., URLs, email addresses).
 /// - Normalizing casing (Uppercase for financial symbols, Lowercase for topics).
 public struct RegexMessageParser: MessageParser {
+    // MARK: - Initialization
+    
     public init() {}
+    
+    // MARK: - MessageParser Implementation
     
     public func extractTags(from text: String) -> [ParsedTag] {
         var tags: [ParsedTag] = []
         
-        // Regex Patterns:
-        // (?<!\S) is a negative lookbehind ensuring the tag is at the start of a word/string.
+        // 1. Futures: Start with / followed by alphanumeric
+        tags.append(contentsOf: findMatches(in: text, pattern: AppConstants.Patterns.future, type: .future))
         
-        // 1. Futures: Start with / followed by alphanumeric (e.g., /ES, /NQM4)
-        tags.append(contentsOf: findMatches(in: text, pattern: "(?<!\\S)/[A-Za-z0-9]+", type: .future))
+        // 2. Tickers: Start with $ followed by letters
+        tags.append(contentsOf: findMatches(in: text, pattern: AppConstants.Patterns.ticker, type: .ticker))
         
-        // 2. Tickers: Start with $ followed by letters (e.g., $AAPL, $SPY)
-        tags.append(contentsOf: findMatches(in: text, pattern: "(?<!\\S)\\$[A-Za-z]+", type: .ticker))
-        
-        // 3. Topics: Start with # followed by alphanumeric or underscores (e.g., #tilt, #eod_review)
-        tags.append(contentsOf: findMatches(in: text, pattern: "(?<!\\S)#[A-Za-z0-9_]+", type: .topic))
+        // 3. Topics: Start with # followed by alphanumeric or underscores
+        tags.append(contentsOf: findMatches(in: text, pattern: AppConstants.Patterns.topic, type: .topic))
         
         return tags
     }
+    
+    // MARK: - Private Logic
     
     private func findMatches(in text: String, pattern: String, type: TagType) -> [ParsedTag] {
         guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }

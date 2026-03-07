@@ -10,13 +10,13 @@ struct TagColorsTab: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("Category Colors")
+            Text("settings.tags.header")
                 .font(.headline)
             
             VStack(spacing: 16) {
-                CategoryColorRow(title: "Futures (/ES, /NQ)", type: .future)
-                CategoryColorRow(title: "Topics (#tilt, #review)", type: .topic)
-                CategoryColorRow(title: "Tickers ($AAPL, $SPY)", type: .ticker)
+                CategoryColorRow(title: String(localized: "settings.tags.category.future", comment: "Future category label"), type: .future)
+                CategoryColorRow(title: String(localized: "settings.tags.category.topic", comment: "Topic category label"), type: .topic)
+                CategoryColorRow(title: String(localized: "settings.tags.category.ticker", comment: "Ticker category label"), type: .ticker)
             }
             .padding()
             .background(Color(nsColor: .controlBackgroundColor))

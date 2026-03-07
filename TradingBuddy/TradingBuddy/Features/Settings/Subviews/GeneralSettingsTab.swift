@@ -12,8 +12,8 @@ struct GeneralSettingsTab: View {
     let repository: JournalRepository
     let imageStorage: ImageStorageService
     
-    @AppStorage("showHistoryJumpWarning") private var showHistoryJumpWarning = true
-    @AppStorage("rolloverPromptDelayHours") private var rolloverPromptDelayHours = 2
+    @AppStorage(AppConstants.Storage.showHistoryJumpWarningKey) private var showHistoryJumpWarning = true
+    @AppStorage(AppConstants.Storage.rolloverPromptDelayHoursKey) private var rolloverPromptDelayHours = 2
     @State private var showDeleteConfirmation = false
     
     // MARK: - Body
@@ -26,7 +26,10 @@ struct GeneralSettingsTab: View {
             Spacer()
         }
         .padding(20)
-        .confirmationDialog("Are you absolutely sure?", isPresented: $showDeleteConfirmation) {
+        .confirmationDialog(
+            Text("settings.general.delete_confirm.title"),
+            isPresented: $showDeleteConfirmation
+        ) {
             confirmationButtons
         }
     }
@@ -35,36 +38,38 @@ struct GeneralSettingsTab: View {
     
     private var behaviorSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Behavior").font(.headline)
-            Toggle("Warn when typing on historical days", isOn: $showHistoryJumpWarning)
+            Text("settings.general.behavior.header").font(.headline)
+            Toggle("settings.general.behavior.warn_history", isOn: $showHistoryJumpWarning)
             HStack {
-                Text("Rollover Snooze Duration:")
-                Stepper(value: $rolloverPromptDelayHours, in: 1...12) { Text("\(rolloverPromptDelayHours) Hours") }
+                Text("settings.general.behavior.rollover_snooze.label")
+                Stepper(value: $rolloverPromptDelayHours, in: 1...12) { 
+                    Text("settings.general.behavior.rollover_snooze.value \(rolloverPromptDelayHours)") 
+                }
             }
         }
     }
     
     private var dataSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Data").font(.headline)
-            Button("Open App Data Folder in Finder") { NSWorkspace.shared.open(imageStorage.getBaseDirectory()) }
+            Text("settings.general.data.header").font(.headline)
+            Button("settings.general.data.open_folder") { NSWorkspace.shared.open(imageStorage.getBaseDirectory()) }
             VStack(alignment: .leading, spacing: 4) {
                 Button(role: .destructive, action: { showDeleteConfirmation = true }) {
-                    Text("Clear Entire Database...").foregroundStyle(.red)
+                    Text("settings.general.data.clear_db.button").foregroundStyle(.red)
                 }
-                Text("This action cannot be undone.").font(.caption).foregroundStyle(.secondary)
+                Text("settings.general.data.clear_db.warning").font(.caption).foregroundStyle(.secondary)
             }
         }
     }
     
     @ViewBuilder
     private var confirmationButtons: some View {
-        Button("Delete Database & All Saved Images", role: .destructive) {
+        Button("settings.general.delete_confirm.both", role: .destructive) {
             Task { try? await repository.clearDatabaseAndImages() }
         }
-        Button("Delete Database Only", role: .destructive) {
+        Button("settings.general.delete_confirm.db_only", role: .destructive) {
             Task { try? await repository.clearDatabaseOnly() }
         }
-        Button("Cancel", role: .cancel) {}
+        Button("settings.general.delete_confirm.cancel", role: .cancel) {}
     }
 }

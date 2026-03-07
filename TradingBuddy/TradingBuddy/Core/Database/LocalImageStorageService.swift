@@ -24,22 +24,22 @@ public class LocalImageStorageService: ImageStorageService {
     
     public func saveImage(_ image: NSImage, date: Date) async throws -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.dateFormat = AppConstants.Formats.imageDateFolder
         let dateFolderName = formatter.string(from: date)
         
         let dateFolderURL = imagesDirectory.appendingPathComponent(dateFolderName, isDirectory: true)
         try? FileManager.default.createDirectory(at: dateFolderURL, withIntermediateDirectories: true)
         
-        let fileName = UUID().uuidString + ".png"
+        let fileName = UUID().uuidString + AppConstants.Formats.imageExtension
         let fileURL = dateFolderURL.appendingPathComponent(fileName)
         
         guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
-            throw NSError(domain: "ImageError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to read image pixels"])
+            throw NSError(domain: AppConstants.Errors.imageDomain, code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to read image pixels"])
         }
         
         let bitmapImage = NSBitmapImageRep(cgImage: cgImage)
         guard let pngData = bitmapImage.representation(using: .png, properties: [:]) else {
-            throw NSError(domain: "ImageError", code: 2, userInfo: [NSLocalizedDescriptionKey: "Failed to convert to PNG"])
+            throw NSError(domain: AppConstants.Errors.imageDomain, code: 2, userInfo: [NSLocalizedDescriptionKey: "Failed to convert to PNG"])
         }
         
         try pngData.write(to: fileURL)

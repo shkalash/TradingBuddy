@@ -55,7 +55,7 @@ public class GRDBJournalRepository: JournalRepository {
         }
         
         await MainActor.run {
-            NotificationCenter.default.post(name: .databaseUpdated, object: nil)
+            NotificationCenter.default.post(name: AppConstants.Notifications.databaseUpdated, object: nil)
         }
         
         return savedEntry
@@ -71,7 +71,7 @@ public class GRDBJournalRepository: JournalRepository {
             entry.text = newText
             try entry.update(db)
             
-            try EntryTag.filter(Column("entryId") == id).deleteAll(db)
+            try EntryTag.filter(Column(AppConstants.Database.Columns.entryId) == id).deleteAll(db)
             
             for pTag in parsedTags {
                 if var existingTag = try Tag.fetchOne(db, key: pTag.id) {
@@ -88,15 +88,15 @@ public class GRDBJournalRepository: JournalRepository {
         }
         
         await MainActor.run {
-            NotificationCenter.default.post(name: .databaseUpdated, object: nil)
+            NotificationCenter.default.post(name: AppConstants.Notifications.databaseUpdated, object: nil)
         }
     }
     
     public func entries(for day: Date) async throws -> [JournalEntry] {
         try await appDb.dbWriter.read { db in
             try JournalEntry
-                .filter(Column("tradingDay") == day)
-                .order(Column("timestamp").asc)
+                .filter(Column(AppConstants.Database.Columns.tradingDay) == day)
+                .order(Column(AppConstants.Database.Columns.timestamp).asc)
                 .fetchAll(db)
         }
     }
@@ -104,9 +104,9 @@ public class GRDBJournalRepository: JournalRepository {
     public func allTradingDays() async throws -> [Date] {
         try await appDb.dbWriter.read { db in
             let request = JournalEntry
-                .select(Column("tradingDay"))
+                .select(Column(AppConstants.Database.Columns.tradingDay))
                 .distinct()
-                .order(Column("tradingDay").desc)
+                .order(Column(AppConstants.Database.Columns.tradingDay).desc)
             
             return try Date.fetchAll(db, request)
         }
@@ -114,15 +114,15 @@ public class GRDBJournalRepository: JournalRepository {
     
     public func allTags() async throws -> [Tag] {
         try await appDb.dbWriter.read { db in
-            try Tag.order(Column("lastUsed").desc).fetchAll(db)
+            try Tag.order(Column(AppConstants.Database.Columns.lastUsed).desc).fetchAll(db)
         }
     }
     
     public func entries(forTag tagId: String) async throws -> [JournalEntry] {
         try await appDb.dbWriter.read { db in
             try JournalEntry
-                .joining(required: JournalEntry.tags.filter(Column("id") == tagId))
-                .order(Column("timestamp").asc)
+                .joining(required: JournalEntry.tags.filter(Column(AppConstants.Database.Columns.id) == tagId))
+                .order(Column(AppConstants.Database.Columns.timestamp).asc)
                 .fetchAll(db)
         }
     }
@@ -135,7 +135,7 @@ public class GRDBJournalRepository: JournalRepository {
         }
         
         await MainActor.run {
-            NotificationCenter.default.post(name: .databaseCleared, object: nil)
+            NotificationCenter.default.post(name: AppConstants.Notifications.databaseCleared, object: nil)
         }
     }
     
@@ -173,7 +173,7 @@ extension GRDBJournalRepository {
     public func debugPopulate() async throws {
         let calendar = Calendar.current
         let today = Date()
-        let sampleTags = ["/ES", "/NQ", "$AAPL", "$SPY", "#tilt", "#fomo", "#review", "#strategy", "#patience"]
+        let sampleTags = AppConstants.Debug.sampleTags
         
         var tempRecords: [RawSeedData] = []
         
@@ -190,7 +190,8 @@ extension GRDBJournalRepository {
             for i in 0..<entriesCount {
                 let tag1 = sampleTags.randomElement()!
                 let tag2 = sampleTags.randomElement()!
-                let text = "Debug trade note \(i) for \(date.formatted(.dateTime.year().month().day())): Watched \(tag1) closely. Felt a bit of \(tag2)."
+                let dateString = date.formatted(.dateTime.year().month().day())
+                let text = String(format: AppConstants.Debug.sampleTextFormat, i, dateString, tag1, tag2)
                 
                 let randomSeconds = TimeInterval(Int.random(in: 28800...57600))
                 let entryTimestamp = startOfDay.addingTimeInterval(randomSeconds)
