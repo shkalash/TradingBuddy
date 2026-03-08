@@ -24,6 +24,11 @@ extension PersistenceKey {
     // QOL Settings
     static var chatFontSize: PersistenceKey<Double> { .init(name: AppConstants.Storage.chatFontSizeKey) }
     
+    // Preferences
+    static var showHistoryJumpWarning: PersistenceKey<Bool> { .init(name: AppConstants.Storage.showHistoryJumpWarningKey) }
+    static var rolloverPromptDelayHours: PersistenceKey<Int> { .init(name: AppConstants.Storage.rolloverPromptDelayHoursKey) }
+    static var snoozedUntil: PersistenceKey<Date> { .init(name: AppConstants.Storage.snoozedUntilKey) }
+    
     // Window State
     static func windowState(name: String) -> PersistenceKey<WindowState> {
         .init(name: "\(AppConstants.Storage.windowStatekey)_\(name)")

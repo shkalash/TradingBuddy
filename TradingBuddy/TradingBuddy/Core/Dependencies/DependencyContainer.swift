@@ -10,10 +10,13 @@ class DependencyContainer: ObservableObject {
     // MARK: - Handlers
     
     let persistenceHandler: PersistenceHandling
+    let preferencesService: PreferencesService
     
     // MARK: - Initialization
     
     init() {
-        self.persistenceHandler = UserDefaultsPersistenceHandler()
+        let persistence = UserDefaultsPersistenceHandler()
+        self.persistenceHandler = persistence
+        self.preferencesService = AppPreferencesService(persistence: persistence)
     }
 }

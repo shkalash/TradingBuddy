@@ -9,38 +9,38 @@ import Foundation
 public class AppPreferencesService: PreferencesService {
     // MARK: - Properties
     
-    private let defaults: UserDefaults
+    private let persistence: PersistenceHandling
     
     // MARK: - Initialization
     
-    public init(defaults: UserDefaults = .init(suiteName: AppStoragePaths.userDefaultsSuiteName) ?? .standard) {
-        self.defaults = defaults
+    init(persistence: PersistenceHandling) {
+        self.persistence = persistence
     }
     
     // MARK: - Preferences
     
     public var showHistoryJumpWarning: Bool {
-        get { defaults.object(forKey: AppConstants.Storage.showHistoryJumpWarningKey) as? Bool ?? true }
-        set { defaults.set(newValue, forKey: AppConstants.Storage.showHistoryJumpWarningKey) }
+        get { persistence.load(for: .showHistoryJumpWarning) ?? true }
+        set { persistence.save(value: newValue, for: .showHistoryJumpWarning) }
     }
     
     public var rolloverPromptDelayHours: Int {
-        get { defaults.object(forKey: AppConstants.Storage.rolloverPromptDelayHoursKey) as? Int ?? 2 }
-        set { defaults.set(newValue, forKey: AppConstants.Storage.rolloverPromptDelayHoursKey) }
+        get { persistence.load(for: .rolloverPromptDelayHours) ?? 2 }
+        set { persistence.save(value: newValue, for: .rolloverPromptDelayHours) }
     }
     
     public var snoozedUntil: Date? {
-        get { defaults.object(forKey: AppConstants.Storage.snoozedUntilKey) as? Date }
-        set { defaults.set(newValue, forKey: AppConstants.Storage.snoozedUntilKey) }
+        get { persistence.load(for: .snoozedUntil) }
+        set { persistence.save(value: newValue, for: .snoozedUntil) }
     }
     
     // MARK: - QOL Settings
     
     public var chatFontSize: Double {
         get { 
-            let val = defaults.double(forKey: AppConstants.Storage.chatFontSizeKey)
-            return val > 0 ? val : 14.0 // Default 14
+            let val = persistence.load(for: .chatFontSize) ?? 14.0
+            return val > 0 ? val : 14.0
         }
-        set { defaults.set(newValue, forKey: AppConstants.Storage.chatFontSizeKey) }
+        set { persistence.save(value: newValue, for: .chatFontSize) }
     }
 }

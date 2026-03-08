@@ -39,7 +39,7 @@ struct TradingBuddyApp: App {
         )
         self.repository = repo
         
-        let prefs = AppPreferencesService()
+        let prefs = dependencies.preferencesService
         let initialRouter = AppRouter()
         
         let vm = ChatViewModel(
