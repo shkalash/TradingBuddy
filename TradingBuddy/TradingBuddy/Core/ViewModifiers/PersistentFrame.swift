@@ -3,16 +3,6 @@
 //  TradingBuddy
 //
 //  Created by Shai Kalev on 3/8/26.
-//
-
-
-//
-//  PersistentFrame.swift
-//  TickerSqueak
-//
-//  Created by Shai Kalev on 6/26/25.
-//
-
 
 import SwiftUI
 extension View {

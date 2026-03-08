@@ -1,11 +1,3 @@
-//
-//  WindowAccessor.swift
-//  TickerSqueak
-//
-//  Created by Shai Kalev on 6/21/25.
-//
-
-
 import SwiftUI
 
 struct WindowAccessor: NSViewRepresentable {

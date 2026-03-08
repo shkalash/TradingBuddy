@@ -1,10 +1,3 @@
-//
-//  PersistentWindow.swift
-//  TickerSqueak
-//
-//  Created by Shai Kalev on 6/26/25.
-//
-
 import Foundation
 import SwiftUI
 import Combine
