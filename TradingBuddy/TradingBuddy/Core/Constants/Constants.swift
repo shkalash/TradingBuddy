@@ -42,7 +42,7 @@ public enum AppConstants: Sendable {
         
         // QOL Persistence Keys
         public static let chatFontSizeKey = "chatFontSize"
-       
+        public static let windowStatekey = "windowState"
         
         public static let debugFolder = "TradingBuddy-Debug"
         public static let productionFolder = "TradingBuddy"

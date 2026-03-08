@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 
 /// The production implementation of `PreferencesService` using isolated `UserDefaults`.
 ///
@@ -6,41 +7,69 @@ import Foundation
 /// - Managing the persistence of user-facing application settings.
 /// - Providing isolated storage for debug and unit testing environments.
 /// - Tracking transient session states like `snoozedUntil`.
+@Observable
 public class AppPreferencesService: PreferencesService {
     // MARK: - Properties
     
-    private let defaults: UserDefaults
+    @ObservationIgnored
+    private let persistence: PersistenceHandling
     
     // MARK: - Initialization
     
-    public init(defaults: UserDefaults = .init(suiteName: AppStoragePaths.userDefaultsSuiteName) ?? .standard) {
-        self.defaults = defaults
+    init(persistence: PersistenceHandling) {
+        self.persistence = persistence
     }
     
     // MARK: - Preferences
     
     public var showHistoryJumpWarning: Bool {
-        get { defaults.object(forKey: AppConstants.Storage.showHistoryJumpWarningKey) as? Bool ?? true }
-        set { defaults.set(newValue, forKey: AppConstants.Storage.showHistoryJumpWarningKey) }
+        get { 
+            access(keyPath: \.showHistoryJumpWarning)
+            return persistence.load(for: .showHistoryJumpWarning) ?? true 
+        }
+        set { 
+            withMutation(keyPath: \.showHistoryJumpWarning) {
+                persistence.save(value: newValue, for: .showHistoryJumpWarning)
+            }
+        }
     }
     
     public var rolloverPromptDelayHours: Int {
-        get { defaults.object(forKey: AppConstants.Storage.rolloverPromptDelayHoursKey) as? Int ?? 2 }
-        set { defaults.set(newValue, forKey: AppConstants.Storage.rolloverPromptDelayHoursKey) }
+        get { 
+            access(keyPath: \.rolloverPromptDelayHours)
+            return persistence.load(for: .rolloverPromptDelayHours) ?? 2 
+        }
+        set { 
+            withMutation(keyPath: \.rolloverPromptDelayHours) {
+                persistence.save(value: newValue, for: .rolloverPromptDelayHours)
+            }
+        }
     }
     
     public var snoozedUntil: Date? {
-        get { defaults.object(forKey: AppConstants.Storage.snoozedUntilKey) as? Date }
-        set { defaults.set(newValue, forKey: AppConstants.Storage.snoozedUntilKey) }
+        get { 
+            access(keyPath: \.snoozedUntil)
+            return persistence.load(for: .snoozedUntil) 
+        }
+        set { 
+            withMutation(keyPath: \.snoozedUntil) {
+                persistence.save(value: newValue, for: .snoozedUntil)
+            }
+        }
     }
     
     // MARK: - QOL Settings
     
     public var chatFontSize: Double {
         get { 
-            let val = defaults.double(forKey: AppConstants.Storage.chatFontSizeKey)
-            return val > 0 ? val : 14.0 // Default 14
+            access(keyPath: \.chatFontSize)
+            let val = persistence.load(for: .chatFontSize) ?? 14.0
+            return val > 0 ? val : 14.0
         }
-        set { defaults.set(newValue, forKey: AppConstants.Storage.chatFontSizeKey) }
+        set { 
+            withMutation(keyPath: \.chatFontSize) {
+                persistence.save(value: newValue, for: .chatFontSize)
+            }
+        }
     }
 }

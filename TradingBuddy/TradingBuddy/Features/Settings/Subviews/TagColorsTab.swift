@@ -6,6 +6,10 @@ import SwiftUI
 /// - Organizing tag categories into an easy-to-read list.
 /// - Providing access to color pickers for each `TagType`.
 struct TagColorsTab: View {
+    // MARK: - Properties
+    
+    let dependencies: any AppDependencies
+    
     // MARK: - Body
     
     var body: some View {
@@ -14,9 +18,9 @@ struct TagColorsTab: View {
                 .font(.headline)
             
             VStack(spacing: 16) {
-                CategoryColorRow(title: String(localized: "settings.tags.category.future", comment: "Future category label"), type: .future)
-                CategoryColorRow(title: String(localized: "settings.tags.category.topic", comment: "Topic category label"), type: .topic)
-                CategoryColorRow(title: String(localized: "settings.tags.category.ticker", comment: "Ticker category label"), type: .ticker)
+                CategoryColorRow(title: String(localized: "settings.tags.category.future", comment: "Future category label"), type: .future, dependencies: dependencies)
+                CategoryColorRow(title: String(localized: "settings.tags.category.topic", comment: "Topic category label"), type: .topic, dependencies: dependencies)
+                CategoryColorRow(title: String(localized: "settings.tags.category.ticker", comment: "Ticker category label"), type: .ticker, dependencies: dependencies)
             }
             .padding()
             .background(Color(nsColor: .controlBackgroundColor))

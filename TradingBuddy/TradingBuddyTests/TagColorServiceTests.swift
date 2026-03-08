@@ -5,18 +5,34 @@ import Foundation
 
 struct TagColorServiceTests {
     
-    private var testDefaults: UserDefaults {
-        UserDefaults(suiteName: "io.shkalash.TradingBuddy.unit-tests")!
-    }
-    
-    init() {
-        // Wipe tests defaults before each test
-        testDefaults.removePersistentDomain(forName: "io.shkalash.TradingBuddy.unit-tests")
+    private class MockPersistenceHandler: PersistenceHandling {
+        var storage: [String: Any] = [:]
+        
+        func saveCodable<T: Codable>(object: T?, for key: PersistenceKey<T>) {
+            if let object = object {
+                storage[key.name] = object
+            } else {
+                storage.removeValue(forKey: key.name)
+            }
+        }
+        
+        func loadCodable<T: Codable>(for key: PersistenceKey<T>) -> T? {
+            return storage[key.name] as? T
+        }
+        
+        func save<T>(value: T?, for key: PersistenceKey<T>) {
+            storage[key.name] = value
+        }
+        
+        func load<T>(for key: PersistenceKey<T>) -> T? {
+            return storage[key.name] as? T
+        }
     }
     
     @Test("Default colors are correct when no preferences are saved")
     func testDefaultColors() {
-        let service = TagColorService(defaults: testDefaults)
+        let persistence = MockPersistenceHandler()
+        let service = TagColorService(persistence: persistence)
         
         #expect(service.getColor(for: .future) == .blue)
         #expect(service.getColor(for: .ticker) == .green)
@@ -25,7 +41,8 @@ struct TagColorServiceTests {
     
     @Test("Setting and getting a color persists correctly")
     func testColorPersistence() {
-        let service = TagColorService(defaults: testDefaults)
+        let persistence = MockPersistenceHandler()
+        let service = TagColorService(persistence: persistence)
         let testColor = Color.orange
         
         service.setColor(testColor, for: .future)
@@ -33,8 +50,8 @@ struct TagColorServiceTests {
         let retrievedColor = service.getColor(for: .future)
         #expect(retrievedColor.toHex() == testColor.toHex())
         
-        // Verify cross-instance persistence
-        let newService = TagColorService(defaults: testDefaults)
+        // Verify cross-instance persistence (using the same mock)
+        let newService = TagColorService(persistence: persistence)
         #expect(newService.getColor(for: .future).toHex() == testColor.toHex())
     }
     

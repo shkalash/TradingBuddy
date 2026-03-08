@@ -27,7 +27,8 @@ struct IdentifiableNSImage: Identifiable {
 struct ChatView: View {
     // MARK: - Properties
     
-    @Environment(ChatViewModel.self) private var viewModel
+    let dependencies: any AppDependencies
+    @State private var viewModel: ChatViewModel
     
     @State private var editingEntryId: String? = nil
     @State private var editingText: String = ""
@@ -36,6 +37,13 @@ struct ChatView: View {
     @State private var activePendingPreviewImage: IdentifiableNSImage? = nil
     
     @State private var isEditing = false
+    
+    // MARK: - Initialization
+    
+    init(dependencies: any AppDependencies) {
+        self.dependencies = dependencies
+        self._viewModel = State(initialValue: ChatViewModel(dependencies: dependencies))
+    }
     
     // MARK: - Body
     
@@ -61,6 +69,23 @@ struct ChatView: View {
         } message: { alert in
             alertMessage(for: alert)
         }
+        .task(id: dependencies.router.selection) {
+            guard let selection = dependencies.router.selection else { return }
+            switch selection {
+                case .day(let date): await viewModel.load(day: date)
+                case .tag(let tagId): await viewModel.load(tag: tagId)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: AppConstants.Notifications.databaseUpdated)) { _ in
+            Task {
+                if let selection = dependencies.router.selection {
+                    switch selection {
+                        case .day(let date): await viewModel.load(day: date)
+                        case .tag(let tagId): await viewModel.load(tag: tagId)
+                    }
+                }
+            }
+        }
     }
     
     // MARK: - Components
@@ -74,6 +99,8 @@ struct ChatView: View {
                         
                         MessageBubble(
                             entry: entry,
+                            isFiltered: viewModel.viewedTag != nil || !viewModel.searchText.isEmpty,
+                            chatFontSize: viewModel.chatFontSize,
                             onEdit: { id, text in
                                 editingText = text
                                 editingEntryId = id
@@ -84,7 +111,8 @@ struct ChatView: View {
                             },
                             onJumpToContext: (viewModel.viewedTag != nil || !viewModel.searchText.isEmpty) ? {
                                 Task { await viewModel.jumpToContext(for: entry) }
-                            } : nil
+                            } : nil,
+                            dependencies: dependencies
                         )
                         .id(entry.id)
                         .padding(4)
@@ -312,7 +340,6 @@ struct ChatView: View {
 // MARK: - Previews
 
 #Preview {
-    ChatView()
-        .environment(PreviewMocks.makeChatViewModel())
-        .environment(TagColorService())
+    let mockDeps = PreviewMocks.MockDependencyContainer()
+    return ChatView(dependencies: mockDeps)
 }

@@ -9,11 +9,7 @@ import SwiftUI
 struct GeneralSettingsTab: View {
     // MARK: - Properties
     
-    let repository: JournalRepository
-    let imageStorage: ImageStorageService
-    
-    @AppStorage(AppConstants.Storage.showHistoryJumpWarningKey) private var showHistoryJumpWarning = true
-    @AppStorage(AppConstants.Storage.rolloverPromptDelayHoursKey) private var rolloverPromptDelayHours = 2
+    let dependencies: any AppDependencies
     @State private var showDeleteConfirmation = false
     
     // MARK: - Body
@@ -39,11 +35,19 @@ struct GeneralSettingsTab: View {
     private var behaviorSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("settings.general.behavior.header").font(.headline)
-            Toggle("settings.general.behavior.warn_history", isOn: $showHistoryJumpWarning)
+            
+            Toggle("settings.general.behavior.warn_history", isOn: Binding(
+                get: { dependencies.preferencesService.showHistoryJumpWarning },
+                set: { dependencies.preferencesService.showHistoryJumpWarning = $0 }
+            ))
+            
             HStack {
                 Text("settings.general.behavior.rollover_snooze.label")
-                Stepper(value: $rolloverPromptDelayHours, in: 1...12) { 
-                    Text("settings.general.behavior.rollover_snooze.value \(rolloverPromptDelayHours)") 
+                Stepper(value: Binding(
+                    get: { dependencies.preferencesService.rolloverPromptDelayHours },
+                    set: { dependencies.preferencesService.rolloverPromptDelayHours = $0 }
+                ), in: 1...12) {
+                    Text("settings.general.behavior.rollover_snooze.value \(dependencies.preferencesService.rolloverPromptDelayHours)")
                 }
             }
         }
@@ -52,7 +56,7 @@ struct GeneralSettingsTab: View {
     private var dataSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("settings.general.data.header").font(.headline)
-            Button("settings.general.data.open_folder") { NSWorkspace.shared.open(imageStorage.getBaseDirectory()) }
+            Button("settings.general.data.open_folder") { NSWorkspace.shared.open(dependencies.imageStorage.getBaseDirectory()) }
             VStack(alignment: .leading, spacing: 4) {
                 Button(role: .destructive, action: { showDeleteConfirmation = true }) {
                     Text("settings.general.data.clear_db.button").foregroundStyle(.red)
@@ -65,10 +69,10 @@ struct GeneralSettingsTab: View {
     @ViewBuilder
     private var confirmationButtons: some View {
         Button("settings.general.delete_confirm.both", role: .destructive) {
-            Task { try? await repository.clearDatabaseAndImages() }
+            Task { await dependencies.commands.resetDatabase(includingImages: true) }
         }
         Button("settings.general.delete_confirm.db_only", role: .destructive) {
-            Task { try? await repository.clearDatabaseOnly() }
+            Task { await dependencies.commands.resetDatabase(includingImages: false) }
         }
         Button("settings.general.delete_confirm.cancel", role: .cancel) {}
     }
