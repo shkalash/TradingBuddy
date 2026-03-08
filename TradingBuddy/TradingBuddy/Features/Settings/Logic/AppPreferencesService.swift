@@ -33,4 +33,14 @@ public class AppPreferencesService: PreferencesService {
         get { defaults.object(forKey: AppConstants.Storage.snoozedUntilKey) as? Date }
         set { defaults.set(newValue, forKey: AppConstants.Storage.snoozedUntilKey) }
     }
+    
+    // MARK: - QOL Settings
+    
+    public var chatFontSize: Double {
+        get { 
+            let val = defaults.double(forKey: AppConstants.Storage.chatFontSizeKey)
+            return val > 0 ? val : 14.0 // Default 14
+        }
+        set { defaults.set(newValue, forKey: AppConstants.Storage.chatFontSizeKey) }
+    }
 }

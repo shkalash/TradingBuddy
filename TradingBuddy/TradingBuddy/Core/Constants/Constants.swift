@@ -40,6 +40,10 @@ public enum AppConstants: Sendable {
         public static let rolloverPromptDelayHoursKey = "rolloverPromptDelayHours"
         public static let snoozedUntilKey = "snoozedUntil"
         
+        // QOL Persistence Keys
+        public static let chatFontSizeKey = "chatFontSize"
+       
+        
         public static let debugFolder = "TradingBuddy-Debug"
         public static let productionFolder = "TradingBuddy"
         public static let databaseFileName = "journal.sqlite"

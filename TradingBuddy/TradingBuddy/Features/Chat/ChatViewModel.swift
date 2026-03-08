@@ -56,6 +56,12 @@ public final class ChatViewModel {
     
     public var showAlert: Bool = false
     public var activeAlert: AlertType? = nil
+    
+    // QOL State
+    public var chatFontSize: Double {
+        get { preferences.chatFontSize }
+        set { preferences.chatFontSize = newValue }
+    }
 
     // MARK: - Computed Properties
     
@@ -180,7 +186,6 @@ public final class ChatViewModel {
         self.viewedDay = entry.tradingDay
         self.viewedTag = nil
         
-        // 1. Load data
         do {
             self.entries = try await repository.entries(for: entry.tradingDay)
         } catch {
@@ -188,24 +193,19 @@ public final class ChatViewModel {
             return
         }
         
-        // 2. Run the sequenced jump animation in a single managed task
         highlightTask = Task {
-            // Scroll first
             await MainActor.run { self.pendingScrollId = entry.id }
             
-            // Wait for scroll to stabilize (Reduced delay)
-            try? await Task.sleep(nanoseconds: 250_000_000) 
+            try? await Task.sleep(nanoseconds: 250_000_000)
             
             if Task.isCancelled { return }
             
-            // Start Flash
             await MainActor.run {
                 self.highlightedMessageId = entry.id
                 self.pendingScrollId = nil
             }
             
-            // Flash for exactly 0.8 seconds (Shortened)
-            try? await Task.sleep(nanoseconds: 800_000_000) 
+            try? await Task.sleep(nanoseconds: 800_000_000)
             
             if !Task.isCancelled {
                 await MainActor.run {
@@ -220,6 +220,20 @@ public final class ChatViewModel {
         highlightTask = nil
         highlightedMessageId = nil
         pendingScrollId = nil
+    }
+    
+    // MARK: - Font Scaling
+    
+    public func increaseFontSize() {
+        if chatFontSize < 30 {
+            chatFontSize += 1
+        }
+    }
+    
+    public func decreaseFontSize() {
+        if chatFontSize > 10 {
+            chatFontSize -= 1
+        }
     }
 
     // MARK: - Alert Handlers

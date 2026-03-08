@@ -63,6 +63,22 @@ struct TradingBuddyApp: App {
                 .environment(router)
                 .environment(colorService)
         }
+        .commands {
+            // Append to the system View menu instead of creating a new one
+            CommandGroup(after: .toolbar) {
+                Section {
+                    Button(String(localized: "menu.view.increase_font", defaultValue: "Increase Chat Font Size")) {
+                        viewModel.increaseFontSize()
+                    }
+                    .keyboardShortcut("]", modifiers: .command)
+                    
+                    Button(String(localized: "menu.view.decrease_font", defaultValue: "Decrease Chat Font Size")) {
+                        viewModel.decreaseFontSize()
+                    }
+                    .keyboardShortcut("[", modifiers: .command)
+                }
+            }
+        }
         
         Settings {
             SettingsView(repository: repository, imageStorage: imageStorage)
