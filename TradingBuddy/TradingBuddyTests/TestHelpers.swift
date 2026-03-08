@@ -1,6 +1,7 @@
 import Foundation
 import AppKit
 import SwiftUI
+import Combine
 @testable import TradingBuddy
 
 // MARK: - Test Shared Mocks
@@ -18,6 +19,7 @@ class TestDependencyContainer: AppDependencies {
     var colorService: TagColorService
     var session: AppSession
     var commands: AppCommands
+    var pasteboardMonitor: PasteboardMonitorProviding
     
     init(
         persistenceHandler: PersistenceHandling = PreviewMocks.MockPersistenceHandler(),
@@ -38,6 +40,7 @@ class TestDependencyContainer: AppDependencies {
         self.router = router
         self.colorService = TagColorService(persistence: persistenceHandler)
         self.session = AppSession(dayCalculator: dayCalculator, timeProvider: timeProvider)
+        self.pasteboardMonitor = PreviewMocks.MockPasteboardMonitor()
         
         let repo = repository ?? MockJournalRepository(timeProvider: timeProvider, dayCalculator: dayCalculator)
         self.repository = repo

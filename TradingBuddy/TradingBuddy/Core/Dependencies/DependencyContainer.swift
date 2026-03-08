@@ -15,6 +15,7 @@ class DependencyContainer: AppDependencies, ObservableObject {
     let preferencesService: PreferencesService
     let repository: JournalRepository
     let imageStorage: ImageStorageService
+    let pasteboardMonitor: PasteboardMonitorProviding
     
     // MARK: - Utilities
     
@@ -45,6 +46,8 @@ class DependencyContainer: AppDependencies, ObservableObject {
         let messageParser = RegexMessageParser()
         self.messageParser = messageParser
         
+        self.pasteboardMonitor = AppPasteboardMonitor()
+        
         // 2. Navigation & UI State
         self.router = AppRouter()
         self.colorService = TagColorService(persistence: persistence)
@@ -66,5 +69,10 @@ class DependencyContainer: AppDependencies, ObservableObject {
             repository: repository,
             imageStorage: imageStorage
         )
+        
+        // 5. Start Background Services
+        if preferencesService.isClipboardMonitoringEnabled {
+            self.pasteboardMonitor.startMonitoring()
+        }
     }
 }
