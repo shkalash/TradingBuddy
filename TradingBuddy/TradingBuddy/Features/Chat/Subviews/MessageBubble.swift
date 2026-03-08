@@ -61,7 +61,7 @@ struct MessageBubble: View {
                 
                 Text(entry.timestamp, format: .dateTime.hour().minute().second())
             }
-            .font(.caption.monospacedDigit())
+            .font(.system(size: max(10, viewModel.chatFontSize - 2)).monospacedDigit())
             .foregroundStyle(.tertiary)
             
             Spacer()
@@ -71,6 +71,7 @@ struct MessageBubble: View {
     
     private var messageText: some View {
         Text(formatText(entry.text))
+            .font(.system(size: viewModel.chatFontSize))
             .textSelection(.enabled)
             .lineSpacing(4)
     }
@@ -123,7 +124,7 @@ struct MessageBubble: View {
                     if let swiftRange = Range(match.range, in: rawText),
                        let attrRange = Range<AttributedString.Index>(swiftRange, in: attributed) {
                         attributed[attrRange].foregroundColor = colorService.getColor(for: type)
-                        attributed[attrRange].font = .system(.body, design: .monospaced, weight: .semibold)
+                        attributed[attrRange].font = .system(size: viewModel.chatFontSize, weight: .semibold, design: .monospaced)
                     }
                 }
             }

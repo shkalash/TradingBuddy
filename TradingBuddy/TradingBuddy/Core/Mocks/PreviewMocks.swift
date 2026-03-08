@@ -55,6 +55,7 @@ public enum PreviewMocks {
     }
     
     public class MockPreferences: PreferencesService {
+        public var chatFontSize: Double = 0
         public init() {}
         public var showHistoryJumpWarning: Bool = true
         public var rolloverPromptDelayHours: Int = 2

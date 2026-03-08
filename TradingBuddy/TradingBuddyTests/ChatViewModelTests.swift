@@ -6,6 +6,7 @@ import AppKit
 // MARK: - Mocks for Testing
 
 class MockPreferences: PreferencesService {
+    var chatFontSize: Double = 0
     var showHistoryJumpWarning: Bool = true
     var rolloverPromptDelayHours: Int = 2
     var snoozedUntil: Date? = nil
