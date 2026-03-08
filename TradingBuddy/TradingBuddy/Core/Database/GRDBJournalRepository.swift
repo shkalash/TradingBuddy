@@ -18,7 +18,12 @@ public class GRDBJournalRepository: JournalRepository {
     
     // MARK: - Initialization
     
-    public init(appDb: AppDatabase, timeProvider: TimeProvider, dayCalculator: TradingDayCalculator, parser: MessageParser) {
+    init(
+        appDb: AppDatabase,
+        timeProvider: TimeProvider,
+        dayCalculator: TradingDayCalculator,
+        parser: MessageParser
+    ) {
         self.appDb = appDb
         self.timeProvider = timeProvider
         self.dayCalculator = dayCalculator

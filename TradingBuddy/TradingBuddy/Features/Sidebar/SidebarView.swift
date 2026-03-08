@@ -10,8 +10,7 @@ struct SidebarView: View {
     // MARK: - Properties
     
     @State private var viewModel: SidebarViewModel
-    @Environment(AppRouter.self) private var router
-    @Environment(TagColorService.self) private var colorService
+    let dependencies: any AppDependencies
     
     @State private var isCurrentMonthExpanded = true
     @State private var isHistoryExpanded = false
@@ -20,14 +19,15 @@ struct SidebarView: View {
     
     // MARK: - Initialization
     
-    public init(repository: JournalRepository) {
-        self._viewModel = State(initialValue: SidebarViewModel(repository: repository))
+    public init(dependencies: any AppDependencies) {
+        self.dependencies = dependencies
+        self._viewModel = State(initialValue: SidebarViewModel(dependencies: dependencies))
     }
     
     // MARK: - Body
     
     var body: some View {
-        @Bindable var bindableRouter = router
+        @Bindable var bindableRouter = dependencies.router
         
         VSplitView {
             dateSection(selection: $bindableRouter.selection)
@@ -57,9 +57,9 @@ struct SidebarView: View {
     
     private func tagSection(selection: Binding<NavigationSelection?>) -> some View {
         List(selection: selection) {
-            TagSidebarSection(title: String(localized: "sidebar.section.tags.futures"), tags: viewModel.futureTags, icon: "chart.line.uptrend.xyaxis", color: colorService.getColor(for: .future))
-            TagSidebarSection(title: String(localized: "sidebar.section.tags.tickers"), tags: viewModel.tickerTags, icon: "building.columns.fill", color: colorService.getColor(for: .ticker))
-            TagSidebarSection(title: String(localized: "sidebar.section.tags.topics"), tags: viewModel.topicTags, icon: "number", color: colorService.getColor(for: .topic))
+            TagSidebarSection(title: String(localized: "sidebar.section.tags.futures"), tags: viewModel.futureTags, icon: "chart.line.uptrend.xyaxis", color: dependencies.colorService.getColor(for: .future))
+            TagSidebarSection(title: String(localized: "sidebar.section.tags.tickers"), tags: viewModel.tickerTags, icon: "building.columns.fill", color: dependencies.colorService.getColor(for: .ticker))
+            TagSidebarSection(title: String(localized: "sidebar.section.tags.topics"), tags: viewModel.topicTags, icon: "number", color: dependencies.colorService.getColor(for: .topic))
         }
         .listStyle(.sidebar)
         .frame(minHeight: 100)
@@ -133,7 +133,7 @@ struct SidebarView: View {
         Task {
             await viewModel.fetchData()
             if viewModel.currentMonthDays.isEmpty && viewModel.historyYears.isEmpty {
-                router.selection = .day(Date())
+                dependencies.router.selection = .day(Date())
             }
         }
     }
@@ -142,7 +142,6 @@ struct SidebarView: View {
 // MARK: - Previews
 
 #Preview {
-    SidebarView(repository: PreviewMocks.MockRepo())
-        .environment(AppRouter())
-        .environment(TagColorService())
+    let mockDeps = PreviewMocks.MockDependencyContainer()
+    return SidebarView(dependencies: mockDeps)
 }

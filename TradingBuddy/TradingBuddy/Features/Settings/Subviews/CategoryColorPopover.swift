@@ -13,8 +13,8 @@ struct CategoryColorPopover: View {
     let type: TagType
     @State var draftColor: Color
     @Binding var isPresented: Bool
+    let dependencies: any AppDependencies
     
-    @Environment(TagColorService.self) private var colorService
     @State private var actionTaken = false
     
     // MARK: - Body
@@ -51,7 +51,7 @@ struct CategoryColorPopover: View {
             
             Button("settings.tags.popover.apply") {
                 actionTaken = true
-                colorService.setColor(draftColor, for: type)
+                dependencies.colorService.setColor(draftColor, for: type)
                 closeAllWindows()
             }
             .keyboardShortcut(.defaultAction)
@@ -64,7 +64,7 @@ struct CategoryColorPopover: View {
     private func handleDisappear() {
         // If they click off the popover (without hitting a button), save it automatically!
         if !actionTaken {
-            colorService.setColor(draftColor, for: type)
+            dependencies.colorService.setColor(draftColor, for: type)
         }
         // If the popover vanishes, ensure the floating Mac color grid vanishes with it
         NSColorPanel.shared.close()

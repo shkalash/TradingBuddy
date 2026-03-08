@@ -48,8 +48,8 @@ public final class SidebarViewModel {
     
     // MARK: - Initialization
     
-    public init(repository: JournalRepository) {
-        self.repository = repository
+    init(dependencies: any AppDependencies) {
+        self.repository = dependencies.repository
     }
     
     // MARK: - Data Fetching

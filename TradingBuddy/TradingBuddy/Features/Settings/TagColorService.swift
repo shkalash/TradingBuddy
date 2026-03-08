@@ -10,27 +10,22 @@ import Observation
 @Observable
 public class TagColorService {
     // MARK: - Properties
-    
-    private let defaults: UserDefaults
-    
+
+    private let persistence: PersistenceHandling
+
     public var colorMap: [String: String] = [:] {
         didSet {
-            if let encoded = try? JSONEncoder().encode(colorMap) {
-                defaults.set(encoded, forKey: AppConstants.Storage.tagCategoryColorsKey)
-            }
+            persistence.saveCodable(object: colorMap, for: .tagCategoryColors)
         }
     }
-    
+
     // MARK: - Initialization
-    
-    public init(defaults: UserDefaults = .init(suiteName: AppStoragePaths.userDefaultsSuiteName) ?? .standard) {
-        self.defaults = defaults
-        if let data = defaults.data(forKey: AppConstants.Storage.tagCategoryColorsKey),
-           let decoded = try? JSONDecoder().decode([String: String].self, from: data) {
-            self.colorMap = decoded
-        }
+
+    init(persistence: PersistenceHandling) {
+        self.persistence = persistence
+        self.colorMap = persistence.loadCodable(for: .tagCategoryColors) ?? [:]
     }
-    
+
     // MARK: - Accessors
     
     public func getColor(for type: TagType) -> Color {

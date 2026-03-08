@@ -29,6 +29,9 @@ extension PersistenceKey {
     static var rolloverPromptDelayHours: PersistenceKey<Int> { .init(name: AppConstants.Storage.rolloverPromptDelayHoursKey) }
     static var snoozedUntil: PersistenceKey<Date> { .init(name: AppConstants.Storage.snoozedUntilKey) }
     
+    // Colors
+    static var tagCategoryColors: PersistenceKey<[String: String]> { .init(name: AppConstants.Storage.tagCategoryColorsKey) }
+    
     // Window State
     static func windowState(name: String) -> PersistenceKey<WindowState> {
         .init(name: "\(AppConstants.Storage.windowStatekey)_\(name)")

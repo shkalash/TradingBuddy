@@ -8,71 +8,101 @@ import AppKit
 /// - Providing static data for UI prototyping.
 /// - Implementing mock repositories and storage services.
 /// - Facilitating decoupled View development.
-public enum PreviewMocks {
+enum PreviewMocks {
+    
+    // MARK: - Mock Container
+    
+    @MainActor
+    class MockDependencyContainer: AppDependencies {
+        let persistenceHandler: PersistenceHandling = MockPersistenceHandler()
+        let preferencesService: PreferencesService = MockPreferences()
+        let repository: JournalRepository = MockRepo()
+        let imageStorage: ImageStorageService = MockImageStorage()
+        let timeProvider: TimeProvider = MockTimeProvider()
+        let dayCalculator: TradingDayCalculator = ChicagoTradingDayService()
+        let messageParser: MessageParser = RegexMessageParser()
+        let router: AppRouter = AppRouter()
+        let colorService: TagColorService
+        let session: AppSession
+        let commands: AppCommands
+        
+        init() {
+            self.colorService = TagColorService(persistence: persistenceHandler)
+            self.session = AppSession(dayCalculator: dayCalculator, timeProvider: timeProvider)
+            self.commands = AppCommands(
+                preferences: preferencesService,
+                router: router,
+                repository: repository,
+                imageStorage: imageStorage
+            )
+        }
+    }
     
     // MARK: - Mock Repository
     
-    public class MockRepo: JournalRepository {
-        public init() {}
-        public func saveEntry(text: String, imagePath: String?, date: Date?) async throws -> JournalEntry {
+    class MockRepo: JournalRepository {
+        init() {}
+        func saveEntry(text: String, imagePath: String?, date: Date?) async throws -> JournalEntry {
             JournalEntry(id: UUID().uuidString, text: text, timestamp: Date(), tradingDay: Date(), imagePath: imagePath)
         }
-        public func updateEntry(id: String, newText: String) async throws {}
-        public func entries(for day: Date) async throws -> [JournalEntry] {
+        func updateEntry(id: String, newText: String) async throws {}
+        func entries(for day: Date) async throws -> [JournalEntry] {
             [
                 JournalEntry(id: "1", text: "Mock entry for /ES", timestamp: Date(), tradingDay: day),
                 JournalEntry(id: "2", text: "Mock entry for $AAPL", timestamp: Date().addingTimeInterval(60), tradingDay: day)
             ]
         }
-        public func allTradingDays() async throws -> [Date] { [Date(), Date().addingTimeInterval(-86400)] }
-        public func allTags() async throws -> [Tag] {
+        func allTradingDays() async throws -> [Date] { [Date(), Date().addingTimeInterval(-86400)] }
+        func allTags() async throws -> [Tag] {
             [
                 Tag(id: "/ES", type: .future, lastUsed: Date()),
                 Tag(id: "$AAPL", type: .ticker, lastUsed: Date()),
                 Tag(id: "#tilt", type: .topic, lastUsed: Date())
             ]
         }
-        public func entries(forTag tagId: String) async throws -> [JournalEntry] {
+        func entries(forTag tagId: String) async throws -> [JournalEntry] {
             [JournalEntry(id: "1", text: "Tag entry for \(tagId)", timestamp: Date(), tradingDay: Date())]
         }
-        public func clearDatabaseOnly() async throws {}
-        public func clearDatabaseAndImages() async throws {}
+        func clearDatabaseOnly() async throws {}
+        func clearDatabaseAndImages() async throws {}
     }
     
     // MARK: - Mock Services
     
-    public class MockImageStorage: ImageStorageService {
-        public init() {}
-        public func saveImage(_ image: NSImage, date: Date) async throws -> String { "" }
-        public func getFileURL(for relativePath: String) -> URL { URL(fileURLWithPath: "") }
-        public func clearAllImages() throws {}
-        public func getBaseDirectory() -> URL { URL(fileURLWithPath: "/") }
+    class MockImageStorage: ImageStorageService {
+        init() {}
+        func saveImage(_ image: NSImage, date: Date) async throws -> String { "" }
+        func getFileURL(for relativePath: String) -> URL { URL(fileURLWithPath: "") }
+        func clearAllImages() throws {}
+        func getBaseDirectory() -> URL { URL(fileURLWithPath: "/") }
     }
     
-    public class MockTimeProvider: TimeProvider {
-        public init() {}
-        public var now: Date { Date() }
+    class MockTimeProvider: TimeProvider {
+        init() {}
+        var now: Date { Date() }
     }
     
-    public class MockPreferences: PreferencesService {
-        public var chatFontSize: Double = 0
-        public init() {}
-        public var showHistoryJumpWarning: Bool = true
-        public var rolloverPromptDelayHours: Int = 2
-        public var snoozedUntil: Date? = nil
+    @Observable
+    class MockPreferences: PreferencesService {
+        var chatFontSize: Double = 14.0
+        init() {}
+        var showHistoryJumpWarning: Bool = true
+        var rolloverPromptDelayHours: Int = 2
+        var snoozedUntil: Date? = nil
+    }
+
+    class MockPersistenceHandler: PersistenceHandling {
+        init() {}
+        func saveCodable<T: Codable>(object: T?, for key: PersistenceKey<T>) {}
+        func loadCodable<T: Codable>(for key: PersistenceKey<T>) -> T? { nil }
+        func save<T>(value: T?, for key: PersistenceKey<T>) {}
+        func load<T>(for key: PersistenceKey<T>) -> T? { nil }
     }
     
     // MARK: - Factories
     
     /// A helper to create a fully configured ChatViewModel for previews.
-    public static func makeChatViewModel() -> ChatViewModel {
-        ChatViewModel(
-            repository: MockRepo(),
-            timeProvider: MockTimeProvider(),
-            dayCalculator: ChicagoTradingDayService(),
-            preferences: MockPreferences(),
-            router: AppRouter(),
-            imageStorage: MockImageStorage()
-        )
+    static func makeChatViewModel(dependencies: any AppDependencies) -> ChatViewModel {
+        ChatViewModel(dependencies: dependencies)
     }
 }

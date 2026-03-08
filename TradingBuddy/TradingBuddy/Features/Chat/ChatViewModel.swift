@@ -24,21 +24,18 @@ public final class ChatViewModel {
     private let repository: JournalRepository
     private let timeProvider: TimeProvider
     private let dayCalculator: TradingDayCalculator
-    private var preferences: PreferencesService
+    private let preferences: PreferencesService
     private let router: AppRouter
     private let imageStorage: ImageStorageService
+    private let session: AppSession
 
     // MARK: - State
     
     public var entries: [JournalEntry] = []
     public var inputText: String = ""
-    
-    private var _searchText: String = ""
-    public var searchText: String {
-        get { _searchText }
-        set {
-            if _searchText != newValue {
-                _searchText = newValue
+    public var searchText: String = "" {
+        didSet {
+            if oldValue != searchText {
                 clearHighlight()
             }
         }
@@ -48,22 +45,26 @@ public final class ChatViewModel {
     
     public var viewedDay: Date
     public var viewedTag: String? = nil
-    public var activeTradingDay: Date
     
     public var highlightedMessageId: String? = nil
     public var pendingScrollId: String? = nil
     private var highlightTask: Task<Void, Never>? = nil
     
+    /// Flag to prevent clearing highlight during a jump sequence
+    private var isJumping = false
+    
     public var showAlert: Bool = false
     public var activeAlert: AlertType? = nil
     
-    // QOL State
-    public var chatFontSize: Double {
-        get { preferences.chatFontSize }
-        set { preferences.chatFontSize = newValue }
-    }
-
     // MARK: - Computed Properties
+    
+    public var activeTradingDay: Date {
+        session.activeTradingDay
+    }
+    
+    public var chatFontSize: Double {
+        preferences.chatFontSize
+    }
     
     public var filteredEntries: [JournalEntry] {
         if searchText.isEmpty { return entries }
@@ -72,23 +73,16 @@ public final class ChatViewModel {
 
     // MARK: - Initialization
     
-    public init(
-        repository: JournalRepository,
-        timeProvider: TimeProvider,
-        dayCalculator: TradingDayCalculator,
-        preferences: PreferencesService,
-        router: AppRouter,
-        imageStorage: ImageStorageService
-    ) {
-        self.repository = repository
-        self.timeProvider = timeProvider
-        self.dayCalculator = dayCalculator
-        self.preferences = preferences
-        self.router = router
-        self.imageStorage = imageStorage
+    init(dependencies: any AppDependencies) {
+        self.repository = dependencies.repository
+        self.timeProvider = dependencies.timeProvider
+        self.dayCalculator = dependencies.dayCalculator
+        self.preferences = dependencies.preferencesService
+        self.router = dependencies.router
+        self.imageStorage = dependencies.imageStorage
+        self.session = dependencies.session
         
-        let initialDay = dayCalculator.getTradingDay(for: timeProvider.now)
-        self.activeTradingDay = initialDay
+        let initialDay = dependencies.session.activeTradingDay
         self.viewedDay = initialDay
     }
 
@@ -96,12 +90,17 @@ public final class ChatViewModel {
     
     @MainActor
     public func load(day: Date) async {
-        clearHighlight()
+        // Optimization: Don't clear highlight if we are reloading the same day
+        // or if a jump is currently in progress.
+        if !isJumping && (viewedDay != day || viewedTag != nil) {
+            clearHighlight()
+        }
+        
         self.viewedDay = day
         self.viewedTag = nil
-        self.activeTradingDay = dayCalculator.getTradingDay(for: timeProvider.now)
         do {
             self.entries = try await repository.entries(for: day)
+            NotificationCenter.default.post(name: AppConstants.Notifications.databaseUpdated, object: nil)
         } catch {
             print("ChatViewModel: Failed to load entries: \(error)")
         }
@@ -109,11 +108,13 @@ public final class ChatViewModel {
 
     @MainActor
     public func load(tag: String) async {
-        clearHighlight()
+        if !isJumping {
+            clearHighlight()
+        }
         self.viewedTag = tag
-        self.activeTradingDay = dayCalculator.getTradingDay(for: timeProvider.now)
         do {
             self.entries = try await repository.entries(forTag: tag)
+            NotificationCenter.default.post(name: AppConstants.Notifications.databaseUpdated, object: nil)
         } catch {
             print("ChatViewModel: Failed to load tag entries: \(error)")
         }
@@ -124,8 +125,7 @@ public final class ChatViewModel {
     @MainActor
     public func sendMessage() async {
         let now = timeProvider.now
-        let currentActiveDay = dayCalculator.getTradingDay(for: now)
-        self.activeTradingDay = currentActiveDay
+        let currentActiveDay = activeTradingDay
 
         if let snoozedUntil = preferences.snoozedUntil, now < snoozedUntil {
             // Snoozed, continue
@@ -182,7 +182,15 @@ public final class ChatViewModel {
     @MainActor
     public func jumpToContext(for entry: JournalEntry) async {
         clearHighlight()
-        self._searchText = ""
+        isJumping = true
+        
+        // 1. Reset filters
+        self.searchText = ""
+        
+        // 2. Update the Global Router so Sidebar and UI stay in sync
+        router.selection = .day(entry.tradingDay)
+        
+        // 3. Update local state immediately to ensure smooth transition
         self.viewedDay = entry.tradingDay
         self.viewedTag = nil
         
@@ -190,27 +198,39 @@ public final class ChatViewModel {
             self.entries = try await repository.entries(for: entry.tradingDay)
         } catch {
             print("ChatViewModel: Failed to load jump entries: \(error)")
+            isJumping = false
             return
         }
         
+        // 4. Perform the scroll and highlight
         highlightTask = Task {
+            // Give SwiftUI a moment to render the new entries list
+            try? await Task.sleep(nanoseconds: 150_000_000)
+            
             await MainActor.run { self.pendingScrollId = entry.id }
             
-            try? await Task.sleep(nanoseconds: 250_000_000)
+            // Allow time for the ScrollView to perform the animated scroll
+            try? await Task.sleep(nanoseconds: 400_000_000)
             
-            if Task.isCancelled { return }
+            if Task.isCancelled { 
+                await MainActor.run { self.isJumping = false }
+                return 
+            }
             
             await MainActor.run {
                 self.highlightedMessageId = entry.id
                 self.pendingScrollId = nil
             }
             
-            try? await Task.sleep(nanoseconds: 800_000_000)
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
             
             if !Task.isCancelled {
                 await MainActor.run {
                     self.highlightedMessageId = nil
+                    self.isJumping = false // Full sequence done
                 }
+            } else {
+                await MainActor.run { self.isJumping = false }
             }
         }
     }
@@ -220,20 +240,7 @@ public final class ChatViewModel {
         highlightTask = nil
         highlightedMessageId = nil
         pendingScrollId = nil
-    }
-    
-    // MARK: - Font Scaling
-    
-    public func increaseFontSize() {
-        if chatFontSize < 30 {
-            chatFontSize += 1
-        }
-    }
-    
-    public func decreaseFontSize() {
-        if chatFontSize > 10 {
-            chatFontSize -= 1
-        }
+        isJumping = false
     }
 
     // MARK: - Alert Handlers
@@ -241,7 +248,7 @@ public final class ChatViewModel {
     @MainActor
     public func handleAlertConfirmation() async {
         showAlert = false
-        let today = dayCalculator.getTradingDay(for: timeProvider.now)
+        let today = activeTradingDay
         router.selection = .day(today)
         await load(day: today)
         await performSave(on: today)

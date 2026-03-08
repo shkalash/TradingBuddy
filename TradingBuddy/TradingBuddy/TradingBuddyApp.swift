@@ -11,58 +11,19 @@ import GRDB
 struct TradingBuddyApp: App {
     // MARK: - Properties
     private let windowName = "io.shkalash.TradingBuddy"
-    private let repository: JournalRepository
-    private let imageStorage: ImageStorageService
-    private let dependencies = DependencyContainer()
-    
-    @State private var viewModel: ChatViewModel
-    @State private var router: AppRouter
-    @State private var colorService = TagColorService()
+    private let dependencies: DependencyContainer
     
     // MARK: - Initialization
     
     init() {
-        let storage = LocalImageStorageService()
-        self.imageStorage = storage
-        
-        let appDb = try! AppDatabase.shared()
-        
-        let timeProvider = SystemTimeProvider()
-        let dayCalculator = ChicagoTradingDayService()
-        let parser = RegexMessageParser()
-        
-        let repo = GRDBJournalRepository(
-            appDb: appDb,
-            timeProvider: timeProvider,
-            dayCalculator: dayCalculator,
-            parser: parser
-        )
-        self.repository = repo
-        
-        let prefs = dependencies.preferencesService
-        let initialRouter = AppRouter()
-        
-        let vm = ChatViewModel(
-            repository: repo,
-            timeProvider: timeProvider,
-            dayCalculator: dayCalculator,
-            preferences: prefs,
-            router: initialRouter,
-            imageStorage: storage
-        )
-        
-        self._viewModel = State(wrappedValue: vm)
-        self._router = State(wrappedValue: initialRouter)
+        self.dependencies = DependencyContainer()
     }
     
     // MARK: - Body
     
     var body: some Scene {
         WindowGroup {
-            ContentView(repository: repository, imageStorage: imageStorage)
-                .environment(viewModel)
-                .environment(router)
-                .environment(colorService)
+            ContentView(dependencies: dependencies)
                 .persistentFrame(
                     forKey: windowName,
                     onLoad: { key in
@@ -78,12 +39,12 @@ struct TradingBuddyApp: App {
             CommandGroup(after: .toolbar) {
                 Section {
                     Button(String(localized: "menu.view.increase_font", defaultValue: "Increase Chat Font Size")) {
-                        viewModel.increaseFontSize()
+                        dependencies.preferencesService.chatFontSize += 1
                     }
                     .keyboardShortcut("]", modifiers: .command)
                     
                     Button(String(localized: "menu.view.decrease_font", defaultValue: "Decrease Chat Font Size")) {
-                        viewModel.decreaseFontSize()
+                        dependencies.preferencesService.chatFontSize = max(8, dependencies.preferencesService.chatFontSize - 1)
                     }
                     .keyboardShortcut("[", modifiers: .command)
                 }
@@ -91,8 +52,7 @@ struct TradingBuddyApp: App {
         }
         
         Settings {
-            SettingsView(repository: repository, imageStorage: imageStorage)
-                .environment(colorService)
+            SettingsView(dependencies: dependencies)
         }
     }
 }
