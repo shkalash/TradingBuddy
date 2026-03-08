@@ -23,4 +23,5 @@ protocol AppDependencies {
     var colorService: TagColorService { get }
     var session: AppSession { get }
     var commands: AppCommands { get }
+    var pasteboardMonitor: PasteboardMonitorProviding { get }
 }

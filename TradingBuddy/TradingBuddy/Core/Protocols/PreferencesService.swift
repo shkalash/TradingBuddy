@@ -14,4 +14,6 @@ public protocol PreferencesService: AnyObject {
     
     // QOL Settings
     var chatFontSize: Double { get set }
+    var isClipboardMonitoringEnabled: Bool { get set }
+    var forceFocusChatOnImageIntake: Bool { get set }
 }

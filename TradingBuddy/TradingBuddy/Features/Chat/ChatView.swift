@@ -25,10 +25,17 @@ struct IdentifiableNSImage: Identifiable {
 /// - Handling image previews and message editing.
 /// - Displaying alerts for session rollovers and historical jump warnings.
 struct ChatView: View {
+    // MARK: - Types
+    
+    enum FocusField {
+        case chatInput
+    }
+    
     // MARK: - Properties
     
     let dependencies: any AppDependencies
     @State private var viewModel: ChatViewModel
+    @FocusState private var focusedField: FocusField?
     
     @State private var editingEntryId: String? = nil
     @State private var editingText: String = ""
@@ -85,6 +92,9 @@ struct ChatView: View {
                     }
                 }
             }
+        }
+        .onReceive(viewModel.focusSignal) { _ in
+            focusedField = .chatInput
         }
     }
     
@@ -164,6 +174,7 @@ struct ChatView: View {
                         },
                         onSubmit: { send() }
                     )
+                    .focused($focusedField, equals: .chatInput)
                     .frame(minHeight: 22, maxHeight: 150)
                     .padding(.vertical, 12)
                     

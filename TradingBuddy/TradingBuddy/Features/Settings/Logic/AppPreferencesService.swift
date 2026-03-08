@@ -14,6 +14,11 @@ public class AppPreferencesService: PreferencesService {
     @ObservationIgnored
     private let persistence: PersistenceHandling
     
+    // Transient UI State (Not persisted)
+    public var viewedTag: String? = nil
+    public var searchText: String = ""
+    public var activeTradingDay: Date = Date()
+    
     // MARK: - Initialization
     
     init(persistence: PersistenceHandling) {
@@ -69,6 +74,30 @@ public class AppPreferencesService: PreferencesService {
         set { 
             withMutation(keyPath: \.chatFontSize) {
                 persistence.save(value: newValue, for: .chatFontSize)
+            }
+        }
+    }
+    
+    public var isClipboardMonitoringEnabled: Bool {
+        get {
+            access(keyPath: \.isClipboardMonitoringEnabled)
+            return persistence.load(for: .isClipboardMonitoringEnabled) ?? true
+        }
+        set {
+            withMutation(keyPath: \.isClipboardMonitoringEnabled) {
+                persistence.save(value: newValue, for: .isClipboardMonitoringEnabled)
+            }
+        }
+    }
+    
+    public var forceFocusChatOnImageIntake: Bool {
+        get {
+            access(keyPath: \.forceFocusChatOnImageIntake)
+            return persistence.load(for: .forceFocusChatOnImageIntake) ?? true
+        }
+        set {
+            withMutation(keyPath: \.forceFocusChatOnImageIntake) {
+                persistence.save(value: newValue, for: .forceFocusChatOnImageIntake)
             }
         }
     }

@@ -28,6 +28,8 @@ extension PersistenceKey {
     static var showHistoryJumpWarning: PersistenceKey<Bool> { .init(name: AppConstants.Storage.showHistoryJumpWarningKey) }
     static var rolloverPromptDelayHours: PersistenceKey<Int> { .init(name: AppConstants.Storage.rolloverPromptDelayHoursKey) }
     static var snoozedUntil: PersistenceKey<Date> { .init(name: AppConstants.Storage.snoozedUntilKey) }
+    static var isClipboardMonitoringEnabled: PersistenceKey<Bool> { .init(name: AppConstants.Storage.isClipboardMonitoringEnabledKey) }
+    static var forceFocusChatOnImageIntake: PersistenceKey<Bool> { .init(name: AppConstants.Storage.forceFocusChatOnImageIntakeKey) }
     
     // Colors
     static var tagCategoryColors: PersistenceKey<[String: String]> { .init(name: AppConstants.Storage.tagCategoryColorsKey) }

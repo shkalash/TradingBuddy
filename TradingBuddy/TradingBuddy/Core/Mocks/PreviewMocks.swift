@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import AppKit
+import Combine
 
 /// A collection of mock dependencies for use in SwiftUI Previews.
 ///
@@ -25,6 +26,7 @@ enum PreviewMocks {
         let colorService: TagColorService
         let session: AppSession
         let commands: AppCommands
+        let pasteboardMonitor: PasteboardMonitorProviding = MockPasteboardMonitor()
         
         init() {
             self.colorService = TagColorService(persistence: persistenceHandler)
@@ -85,6 +87,8 @@ enum PreviewMocks {
     @Observable
     class MockPreferences: PreferencesService {
         var chatFontSize: Double = 14.0
+        var isClipboardMonitoringEnabled: Bool = true
+        var forceFocusChatOnImageIntake: Bool = true
         init() {}
         var showHistoryJumpWarning: Bool = true
         var rolloverPromptDelayHours: Int = 2
@@ -97,6 +101,12 @@ enum PreviewMocks {
         func loadCodable<T: Codable>(for key: PersistenceKey<T>) -> T? { nil }
         func save<T>(value: T?, for key: PersistenceKey<T>) {}
         func load<T>(for key: PersistenceKey<T>) -> T? { nil }
+    }
+    
+    class MockPasteboardMonitor: PasteboardMonitorProviding {
+        var imagePublisher: AnyPublisher<NSImage, Never> { Empty().eraseToAnyPublisher() }
+        func startMonitoring() {}
+        func stopMonitoring() {}
     }
     
     // MARK: - Factories

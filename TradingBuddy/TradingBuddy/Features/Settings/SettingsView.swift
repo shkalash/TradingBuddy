@@ -25,6 +25,11 @@ struct SettingsView: View {
                 .tabItem { 
                     Label(String(localized: "settings.tab.tags", comment: "Tag colors settings tab title"), systemImage: "paintpalette") 
                 }
+            
+            ClipboardSettingsTab(dependencies: dependencies)
+                .tabItem {
+                    Label(String(localized: "settings.tab.clipboard", defaultValue: "Clipboard"), systemImage: "paperclip")
+                }
         }
         .frame(width: 450, height: 350)
     }

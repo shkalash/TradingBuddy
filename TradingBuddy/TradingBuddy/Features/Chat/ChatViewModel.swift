@@ -2,6 +2,7 @@ import Foundation
 import SwiftUI
 import Observation
 import AppKit
+import Combine
 
 /// The central business logic hub for the Chat feature.
 ///
@@ -10,6 +11,7 @@ import AppKit
 /// - Handling local search filtering and tag-based views.
 /// - Intercepting user actions to provide "History Jump" warnings or "Rollover" prompts.
 /// - Coordinating with `JournalRepository` and `ImageStorageService` for data persistence.
+/// - Monitoring the system pasteboard for automatic screenshot intake.
 @Observable
 public final class ChatViewModel {
     // MARK: - Types
@@ -28,6 +30,7 @@ public final class ChatViewModel {
     private let router: AppRouter
     private let imageStorage: ImageStorageService
     private let session: AppSession
+    private let pasteboardMonitor: PasteboardMonitorProviding
 
     // MARK: - State
     
@@ -56,6 +59,11 @@ public final class ChatViewModel {
     public var showAlert: Bool = false
     public var activeAlert: AlertType? = nil
     
+    private var cancellables = Set<AnyCancellable>()
+    
+    /// A signal emitted when the chat input should be focused.
+    public let focusSignal = PassthroughSubject<Void, Never>()
+    
     // MARK: - Computed Properties
     
     public var activeTradingDay: Date {
@@ -81,11 +89,25 @@ public final class ChatViewModel {
         self.router = dependencies.router
         self.imageStorage = dependencies.imageStorage
         self.session = dependencies.session
+        self.pasteboardMonitor = dependencies.pasteboardMonitor
         
         let initialDay = dependencies.session.activeTradingDay
         self.viewedDay = initialDay
+        
+        setupSubscriptions()
     }
 
+    // MARK: - Setup
+    
+    private func setupSubscriptions() {
+        pasteboardMonitor.imagePublisher
+            .receive(on: RunLoop.main)
+            .sink { [weak self] image in
+                self?.handlePasteboardImage(image)
+            }
+            .store(in: &cancellables)
+    }
+    
     // MARK: - Data Lifecycle
     
     @MainActor
@@ -220,9 +242,11 @@ public final class ChatViewModel {
             await MainActor.run {
                 self.highlightedMessageId = entry.id
                 self.pendingScrollId = nil
+                self.isJumping = false // Jump sequence finished
             }
             
-            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            // Keep highlight for long enough to be seen (3 seconds)
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
             
             if !Task.isCancelled {
                 await MainActor.run {
@@ -241,6 +265,29 @@ public final class ChatViewModel {
         highlightedMessageId = nil
         pendingScrollId = nil
         isJumping = false
+    }
+    
+    private func handlePasteboardImage(_ image: NSImage) {
+        // Only trigger if monitoring is enabled
+        guard preferences.isClipboardMonitoringEnabled else { return }
+        
+        // 1. Inject image
+        self.pendingImage = image
+        
+        // 2. Clear filters so the user sees the input area in the right context
+        self.searchText = ""
+        
+        // 3. Switch to today
+        let today = activeTradingDay
+        router.selection = .day(today)
+        
+        // 4. Force App to front
+        NSApp.activate(ignoringOtherApps: true)
+        
+        // 5. Emit focus signal if enabled
+        if preferences.forceFocusChatOnImageIntake {
+            focusSignal.send()
+        }
     }
 
     // MARK: - Alert Handlers
