@@ -12,13 +12,14 @@ struct MessageBubble: View {
     // MARK: - Properties
     
     let entry: JournalEntry
+    let isFiltered: Bool
+    let chatFontSize: Double
+    
     var onEdit: (String, String) -> Void
     var onImageTap: (URL) -> Void
     var onJumpToContext: (() -> Void)?
     
-    @Environment(ChatViewModel.self) private var viewModel
-    @Environment(TagColorService.self) private var colorService
-    private let storage = LocalImageStorageService()
+    let dependencies: any AppDependencies
     
     // MARK: - Body
     
@@ -37,15 +38,18 @@ struct MessageBubble: View {
             }
         }
         .padding(16)
-        .background(Color(nsColor: .controlBackgroundColor))
+        .background(
+            Color(nsColor: .controlBackgroundColor)
+                // Using a background gesture to avoid conflicts with text selection
+                .contentShape(Rectangle())
+                .simultaneousGesture(TapGesture(count: 2).onEnded {
+                    onJumpToContext?()
+                })
+        )
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.primary.opacity(0.05), lineWidth: 1))
         .shadow(color: Color.black.opacity(0.03), radius: 3, x: 0, y: 1)
         .contextMenu { contextButtons }
-        // Double-click shortcut for jumping to context
-        .onTapGesture(count: 2) {
-            onJumpToContext?()
-        }
     }
     
     // MARK: - Components
@@ -54,14 +58,14 @@ struct MessageBubble: View {
         HStack {
             HStack(spacing: 4) {
                 // If filtering (tag or search), show the full date
-                if viewModel.viewedTag != nil || !viewModel.searchText.isEmpty {
+                if isFiltered {
                     Text(entry.tradingDay, format: .dateTime.month().day())
                         .fontWeight(.semibold)
                 }
                 
                 Text(entry.timestamp, format: .dateTime.hour().minute().second())
             }
-            .font(.system(size: max(10, viewModel.chatFontSize - 2)).monospacedDigit())
+            .font(.system(size: max(10, chatFontSize - 2)).monospacedDigit())
             .foregroundStyle(.tertiary)
             
             Spacer()
@@ -71,13 +75,13 @@ struct MessageBubble: View {
     
     private var messageText: some View {
         Text(formatText(entry.text))
-            .font(.system(size: viewModel.chatFontSize))
+            .font(.system(size: chatFontSize))
             .textSelection(.enabled)
             .lineSpacing(4)
     }
     
     private func imageThumbnail(path: String) -> some View {
-        let imageURL = storage.getFileURL(for: path)
+        let imageURL = dependencies.imageStorage.getFileURL(for: path)
         return Button(action: { onImageTap(imageURL) }) {
             AsyncImage(url: imageURL) { image in
                 image.resizable().scaledToFit().frame(maxHeight: 350)
@@ -123,8 +127,8 @@ struct MessageBubble: View {
                 for match in matches {
                     if let swiftRange = Range(match.range, in: rawText),
                        let attrRange = Range<AttributedString.Index>(swiftRange, in: attributed) {
-                        attributed[attrRange].foregroundColor = colorService.getColor(for: type)
-                        attributed[attrRange].font = .system(size: viewModel.chatFontSize, weight: .semibold, design: .monospaced)
+                        attributed[attrRange].foregroundColor = dependencies.colorService.getColor(for: type)
+                        attributed[attrRange].font = .system(size: chatFontSize, weight: .semibold, design: .monospaced)
                     }
                 }
             }

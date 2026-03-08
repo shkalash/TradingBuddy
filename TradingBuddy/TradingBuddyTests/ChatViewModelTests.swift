@@ -3,82 +3,25 @@ import Foundation
 import AppKit
 @testable import TradingBuddy
 
-// MARK: - Mocks for Testing
-
-class MockPreferences: PreferencesService {
-    var chatFontSize: Double = 0
-    var showHistoryJumpWarning: Bool = true
-    var rolloverPromptDelayHours: Int = 2
-    var snoozedUntil: Date? = nil
-}
-
-class MockImageStorageService: ImageStorageService {
-    func saveImage(_ image: NSImage, date: Date) async throws -> String { return "mock_image.png" }
-    func getFileURL(for relativePath: String) -> URL { return URL(fileURLWithPath: "/mock/\(relativePath)") }
-    func clearAllImages() throws {}
-    func getBaseDirectory() -> URL { return URL(fileURLWithPath: "/mock/") }
-}
-
-class MockJournalRepository: JournalRepository {
-    var mockEntries: [JournalEntry] = []
-    let timeProvider: TimeProvider
-    let dayCalculator: TradingDayCalculator
-    
-    init(timeProvider: TimeProvider, dayCalculator: TradingDayCalculator) {
-        self.timeProvider = timeProvider
-        self.dayCalculator = dayCalculator
-    }
-    
-    func saveEntry(text: String, imagePath: String?, date: Date? = nil) async throws -> JournalEntry {
-        let timestamp = date ?? timeProvider.now
-        
-        let tradingDay: Date
-        if let explicitDate = date {
-            tradingDay = explicitDate
-        } else {
-            tradingDay = dayCalculator.getTradingDay(for: timestamp)
-        }
-        
-        let entry = JournalEntry(text: text, timestamp: timestamp, tradingDay: tradingDay, imagePath: imagePath)
-        mockEntries.append(entry)
-        return entry
-    }
-    func updateEntry(id: String, newText: String) async throws {
-        if let index = mockEntries.firstIndex(where: { $0.id == id }) {
-            mockEntries[index].text = newText
-        }
-    }
-    func entries(for day: Date) async throws -> [JournalEntry] { 
-        return mockEntries.filter { $0.tradingDay == day } 
-    }
-    func allTradingDays() async throws -> [Date] { [] }
-    func allTags() async throws -> [TradingBuddy.Tag] { [] }
-    func entries(forTag tagId: String) async throws -> [JournalEntry] { [] }
-    func clearDatabaseOnly() async throws { mockEntries.removeAll() }
-    func clearDatabaseAndImages() async throws { mockEntries.removeAll() }
-}
-
 // MARK: - Tests
 
 @MainActor 
 struct ChatViewModelTests {
     
-    func makeSUT(now: Date) -> (ChatViewModel, MockJournalRepository, MutableTimeProvider, MockPreferences, AppRouter) {
+    func makeSUT(now: Date) -> (ChatViewModel, MockJournalRepository, MutableTimeProvider, PreferencesService, AppRouter) {
         let timeProvider = MutableTimeProvider(now: now)
-        let dayCalculator = ChicagoTradingDayService()
-        let repo = MockJournalRepository(timeProvider: timeProvider, dayCalculator: dayCalculator)
-        let prefs = MockPreferences()
+        let repo = MockJournalRepository(timeProvider: timeProvider, dayCalculator: ChicagoTradingDayService())
+        let prefs = PreviewMocks.MockPreferences()
         let router = AppRouter()
-        let imageStorage = MockImageStorageService()
         
-        let vm = ChatViewModel(
+        let container = TestDependencyContainer(
+            preferencesService: prefs,
             repository: repo,
             timeProvider: timeProvider,
-            dayCalculator: dayCalculator,
-            preferences: prefs,
-            router: router,
-            imageStorage: imageStorage
+            router: router
         )
+        
+        let vm = ChatViewModel(dependencies: container)
         return (vm, repo, timeProvider, prefs, router)
     }
     

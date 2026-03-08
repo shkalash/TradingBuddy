@@ -10,8 +10,8 @@ struct CategoryColorRow: View {
     
     let title: String
     let type: TagType
+    let dependencies: any AppDependencies
     
-    @Environment(TagColorService.self) private var colorService
     @State private var isShowingPopover = false
     
     // MARK: - Body
@@ -31,15 +31,16 @@ struct CategoryColorRow: View {
     
     private var colorIndicator: some View {
         Circle()
-            .fill(colorService.getColor(for: type))
+            .fill(dependencies.colorService.getColor(for: type))
             .frame(width: 24, height: 24)
             .overlay(Circle().stroke(Color.gray.opacity(0.3), lineWidth: 1))
             .onTapGesture { isShowingPopover = true }
             .popover(isPresented: $isShowingPopover, arrowEdge: .trailing) {
                 CategoryColorPopover(
                     type: type,
-                    draftColor: colorService.getColor(for: type),
-                    isPresented: $isShowingPopover
+                    draftColor: dependencies.colorService.getColor(for: type),
+                    isPresented: $isShowingPopover,
+                    dependencies: dependencies
                 )
             }
     }

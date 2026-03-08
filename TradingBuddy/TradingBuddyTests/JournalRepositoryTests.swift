@@ -3,12 +3,7 @@ import Foundation
 import GRDB
 @testable import TradingBuddy
 
-final class MutableTimeProvider: TimeProvider {
-    var now: Date
-    init(now: Date) { self.now = now }
-}
-
-@MainActor // <-- This fixes all the concurrency errors!
+@MainActor
 struct JournalRepositoryTests {
 
     func makeSUT(now: Date = Date()) throws -> (GRDBJournalRepository, AppDatabase, MutableTimeProvider) {
@@ -33,7 +28,7 @@ struct JournalRepositoryTests {
         let (repo, appDb, _) = try makeSUT()
         
         let text = "Shorted /ES and /NQ due to #tilt"
-        let entry = try await repo.saveEntry(text: text, imagePath: nil)
+        let entry = try await repo.saveEntry(text: text, imagePath: nil as String?)
         
         #expect(entry.text == text)
         
@@ -54,7 +49,7 @@ struct JournalRepositoryTests {
     func testUpdateEntry() async throws {
         let (repo, _, _) = try makeSUT()
         
-        let entry = try await repo.saveEntry(text: "Long $AAPL", imagePath: nil)
+        let entry = try await repo.saveEntry(text: "Long $AAPL", imagePath: nil as String?)
         
         var aaplEntries = try await repo.entries(forTag: "$AAPL")
         #expect(aaplEntries.count == 1)
@@ -80,11 +75,11 @@ struct JournalRepositoryTests {
         
         let (repo, _, timeProvider) = try makeSUT(now: day1Midday)
         
-        _ = try await repo.saveEntry(text: "Midday trade", imagePath: nil)
+        _ = try await repo.saveEntry(text: "Midday trade", imagePath: nil as String?)
         
         timeProvider.now = day1Evening
         
-        _ = try await repo.saveEntry(text: "Evening post-market thoughts", imagePath: nil)
+        _ = try await repo.saveEntry(text: "Evening post-market thoughts", imagePath: nil as String?)
         
         let tradingDays = try await repo.allTradingDays()
         #expect(tradingDays.count == 2)
@@ -106,7 +101,7 @@ struct JournalRepositoryTests {
     func testClearDatabase() async throws {
         let (repo, appDb, _) = try makeSUT()
         
-        _ = try await repo.saveEntry(text: "Test $AAPL", imagePath: nil)
+        _ = try await repo.saveEntry(text: "Test $AAPL", imagePath: nil as String?)
         
         try await repo.clearDatabaseOnly()
         

@@ -7,7 +7,7 @@ import Foundation
 /// - Managing the snooze duration for session rollover prompts.
 /// - Providing an interface for persisting transient state like `snoozedUntil`.
 /// - Managing QOL settings like font size and split positions.
-public protocol PreferencesService {
+public protocol PreferencesService: AnyObject {
     var showHistoryJumpWarning: Bool { get set }
     var rolloverPromptDelayHours: Int { get set }
     var snoozedUntil: Date? { get set }

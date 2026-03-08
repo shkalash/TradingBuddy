@@ -10,20 +10,18 @@ import AppKit
 struct SettingsView: View {
     // MARK: - Properties
     
-    let repository: JournalRepository
-    let imageStorage: ImageStorageService
-    @Environment(TagColorService.self) private var colorService
+    let dependencies: any AppDependencies
     
     // MARK: - Body
     
     var body: some View {
         TabView {
-            GeneralSettingsTab(repository: repository, imageStorage: imageStorage)
+            GeneralSettingsTab(dependencies: dependencies)
                 .tabItem { 
                     Label(String(localized: "settings.tab.general", comment: "General settings tab title"), systemImage: "gearshape") 
                 }
             
-            TagColorsTab()
+            TagColorsTab(dependencies: dependencies)
                 .tabItem { 
                     Label(String(localized: "settings.tab.tags", comment: "Tag colors settings tab title"), systemImage: "paintpalette") 
                 }
@@ -35,9 +33,6 @@ struct SettingsView: View {
 // MARK: - Previews
 
 #Preview {
-    SettingsView(
-        repository: PreviewMocks.MockRepo(),
-        imageStorage: PreviewMocks.MockImageStorage()
-    )
-    .environment(TagColorService())
+    let mockDeps = PreviewMocks.MockDependencyContainer()
+    return SettingsView(dependencies: mockDeps)
 }
