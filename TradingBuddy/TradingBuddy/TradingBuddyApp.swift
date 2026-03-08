@@ -10,9 +10,10 @@ import GRDB
 @main
 struct TradingBuddyApp: App {
     // MARK: - Properties
-    
+    private let windowName = "io.shkalash.TradingBuddy"
     private let repository: JournalRepository
     private let imageStorage: ImageStorageService
+    private let dependencies = DependencyContainer()
     
     @State private var viewModel: ChatViewModel
     @State private var router: AppRouter
@@ -62,6 +63,15 @@ struct TradingBuddyApp: App {
                 .environment(viewModel)
                 .environment(router)
                 .environment(colorService)
+                .persistentFrame(
+                    forKey: windowName,
+                    onLoad: { key in
+                        dependencies.persistenceHandler.loadCodable(for: .windowState(name: key))?.frame
+                    },
+                    onSave: { key, frame in
+                        dependencies.persistenceHandler.saveCodable(object: WindowState(frame: frame), for: .windowState(name: key))
+                    }
+                )
         }
         .commands {
             // Append to the system View menu instead of creating a new one
