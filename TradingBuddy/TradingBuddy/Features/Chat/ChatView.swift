@@ -388,6 +388,7 @@ struct ChatView: View {
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 20)
+            .frame(minWidth:800, maxWidth: .infinity , minHeight: 600, maxHeight: .infinity)
         }
     }
 
