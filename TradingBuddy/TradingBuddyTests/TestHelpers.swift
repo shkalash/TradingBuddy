@@ -71,13 +71,7 @@ class MockJournalRepository: JournalRepository {
     
     func saveEntry(text: String, imagePath: String?, date: Date? = nil) async throws -> JournalEntry {
         let timestamp = date ?? timeProvider.now
-        
-        let tradingDay: Date
-        if let explicitDate = date {
-            tradingDay = explicitDate
-        } else {
-            tradingDay = dayCalculator.getTradingDay(for: timestamp)
-        }
+        let tradingDay = dayCalculator.getTradingDay(for: timestamp)
         
         let entry = JournalEntry(text: text, timestamp: timestamp, tradingDay: tradingDay, imagePath: imagePath)
         mockEntries.append(entry)
@@ -88,8 +82,9 @@ class MockJournalRepository: JournalRepository {
             mockEntries[index].text = newText
         }
     }
-    func entries(for day: Date) async throws -> [JournalEntry] { 
-        return mockEntries.filter { $0.tradingDay == day } 
+    func entries(for day: Date) async throws -> [JournalEntry] {
+        let normalizedDay = dayCalculator.getTradingDay(for: day)
+        return mockEntries.filter { $0.tradingDay == normalizedDay }
     }
     func allTradingDays() async throws -> [Date] { [] }
     func allTags() async throws -> [TradingBuddy.Tag] { [] }
