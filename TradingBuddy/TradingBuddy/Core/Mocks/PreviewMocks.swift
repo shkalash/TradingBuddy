@@ -65,6 +65,13 @@ enum PreviewMocks {
         func entries(forTag tagId: String) async throws -> [JournalEntry] {
             [JournalEntry(id: "1", text: "Tag entry for \(tagId)", timestamp: Date(), tradingDay: Date())]
         }
+        func topTopicTags(limit: Int) async throws -> [Tag] {
+            [
+                Tag(id: "#HVC_Level", type: .topic, lastUsed: Date()),
+                Tag(id: "#size_3+", type: .topic, lastUsed: Date()),
+                Tag(id: "#wait_5m", type: .topic, lastUsed: Date())
+            ]
+        }
         func cleanupOrphanedTags() async throws {}
         func clearDatabaseOnly() async throws {}
         func clearDatabaseAndImages() async throws {}

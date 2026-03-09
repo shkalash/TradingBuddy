@@ -147,6 +147,21 @@ public class GRDBJournalRepository: JournalRepository {
         }
     }
     
+    public func topTopicTags(limit: Int) async throws -> [Tag] {
+        try await appDb.dbWriter.read { db in
+            let sql = """
+            SELECT tag.*
+            FROM tag
+            JOIN entryTag ON tag.id = entryTag.tagId
+            WHERE tag.type = ?
+            GROUP BY tag.id
+            ORDER BY COUNT(entryTag.tagId) DESC
+            LIMIT ?
+            """
+            return try Tag.fetchAll(db, sql: sql, arguments: [TagType.topic.rawValue, limit])
+        }
+    }
+    
     public func cleanupOrphanedTags() async throws {
         try await appDb.dbWriter.write { db in
             let allTags = try Tag.fetchAll(db)
