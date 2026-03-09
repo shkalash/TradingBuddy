@@ -73,11 +73,18 @@ public class GRDBJournalRepository: JournalRepository {
         try await appDb.dbWriter.write { db in
             guard var entry = try JournalEntry.fetchOne(db, key: id) else { return }
             
+            // 1. Capture old tags to check for orphans later
+            let oldTagIds = try Tag.joining(required: Tag.entryTags.filter(Column(AppConstants.Database.Columns.entryId) == id))
+                .fetchAll(db)
+                .map { $0.id }
+            
             entry.text = newText
             try entry.update(db)
             
+            // 2. Remove all existing links for this entry
             try EntryTag.filter(Column(AppConstants.Database.Columns.entryId) == id).deleteAll(db)
             
+            // 3. Create new tags and links
             for pTag in parsedTags {
                 if var existingTag = try Tag.fetchOne(db, key: pTag.id) {
                     existingTag.lastUsed = now
@@ -89,6 +96,14 @@ public class GRDBJournalRepository: JournalRepository {
                 
                 let link = EntryTag(entryId: id, tagId: pTag.id)
                 try link.save(db)
+            }
+            
+            // 4. Cleanup orphaned tags (tags with no more entries)
+            for oldTagId in oldTagIds {
+                let count = try EntryTag.filter(Column(AppConstants.Database.Columns.tagId) == oldTagId).fetchCount(db)
+                if count == 0 {
+                    try Tag.filter(Column(AppConstants.Database.Columns.id) == oldTagId).deleteAll(db)
+                }
             }
         }
         
@@ -129,6 +144,18 @@ public class GRDBJournalRepository: JournalRepository {
                 .joining(required: JournalEntry.tags.filter(Column(AppConstants.Database.Columns.id) == tagId))
                 .order(Column(AppConstants.Database.Columns.timestamp).asc)
                 .fetchAll(db)
+        }
+    }
+    
+    public func cleanupOrphanedTags() async throws {
+        try await appDb.dbWriter.write { db in
+            let allTags = try Tag.fetchAll(db)
+            for tag in allTags {
+                let count = try EntryTag.filter(Column(AppConstants.Database.Columns.tagId) == tag.id).fetchCount(db)
+                if count == 0 {
+                    try Tag.filter(Column(AppConstants.Database.Columns.id) == tag.id).deleteAll(db)
+                }
+            }
         }
     }
     

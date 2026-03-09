@@ -74,5 +74,23 @@ class DependencyContainer: AppDependencies, ObservableObject {
         if preferencesService.isClipboardMonitoringEnabled {
             self.pasteboardMonitor.startMonitoring()
         }
+        
+        // 6. Startup Migrations
+        performStartupMigrations()
+    }
+    
+    private func performStartupMigrations() {
+        let currentVersion = 1
+        if preferencesService.lastMigrationVersion < currentVersion {
+            Task {
+                do {
+                    try await repository.cleanupOrphanedTags()
+                    preferencesService.lastMigrationVersion = currentVersion
+                    print("DependencyContainer: Completed startup migration v\(currentVersion)")
+                } catch {
+                    print("DependencyContainer: Failed startup migration: \(error)")
+                }
+            }
+        }
     }
 }
