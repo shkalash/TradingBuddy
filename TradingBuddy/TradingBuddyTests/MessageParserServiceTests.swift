@@ -79,4 +79,37 @@ struct MessageParserServiceTests {
         #expect(tags.contains(ParsedTag(id: "#great_trade", type: .topic)))
         #expect(tags.contains(ParsedTag(id: "#win_win", type: .topic)))
     }
+
+    @Test("Handles hyphens and custom terminators in topics")
+    func testTopicRegexFeatures() {
+        let text = "Testing #try-this, #multi_word-tag; #tag! /ES $AAPL"
+        let tags = parser.extractTags(from: text)
+        
+        #expect(tags.contains(ParsedTag(id: "#try-this", type: .topic)))
+        #expect(tags.contains(ParsedTag(id: "#multi_word-tag", type: .topic)))
+        #expect(tags.contains(ParsedTag(id: "#tag!", type: .topic)))
+        #expect(tags.contains(ParsedTag(id: "/ES", type: .future)))
+        #expect(tags.contains(ParsedTag(id: "$AAPL", type: .ticker)))
+    }
+
+    @Test("Correctly terminates at specified characters")
+    func testTagTerminators() {
+        let text = "#tag1. #tag2, #tag3: #tag4; #tag5 #tag6\n#tag7\r#tag8"
+        let tags = parser.extractTags(from: text)
+        
+        let ids = tags.map { $0.id }
+        #expect(ids.contains("#tag1"))
+        #expect(ids.contains("#tag2"))
+        #expect(ids.contains("#tag3"))
+        #expect(ids.contains("#tag4"))
+        #expect(ids.contains("#tag5"))
+        #expect(ids.contains("#tag6"))
+        #expect(ids.contains("#tag7"))
+        #expect(ids.contains("#tag8"))
+        
+        #expect(!ids.contains(where: { $0.contains(".") }))
+        #expect(!ids.contains(where: { $0.contains(",") }))
+        #expect(!ids.contains(where: { $0.contains(":") }))
+        #expect(!ids.contains(where: { $0.contains(";") }))
+    }
 }

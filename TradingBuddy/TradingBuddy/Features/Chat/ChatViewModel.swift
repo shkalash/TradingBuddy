@@ -54,7 +54,7 @@ public final class ChatViewModel {
     private var highlightTask: Task<Void, Never>? = nil
     
     /// Flag to prevent clearing highlight during a jump sequence
-    private var isJumping = false
+    public private(set) var isJumping = false
     
     public var showAlert: Bool = false
     public var activeAlert: AlertType? = nil
@@ -171,15 +171,17 @@ public final class ChatViewModel {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty || pendingImage != nil else { return }
 
-        let targetDay = viewedTag != nil ? activeTradingDay : date
+        // Use the current real time for live messages (today or tag view)
+        // This ensures timestamps are correct (not just 00:00:00 normalized day)
+        let targetTimestamp = (viewedTag != nil || date == activeTradingDay) ? timeProvider.now : date
 
         var imagePath: String? = nil
         if let image = pendingImage {
-            imagePath = try? await imageStorage.saveImage(image, date: targetDay)
+            imagePath = try? await imageStorage.saveImage(image, date: targetTimestamp)
         }
 
         do {
-            _ = try await repository.saveEntry(text: text, imagePath: imagePath, date: targetDay)
+            _ = try await repository.saveEntry(text: text, imagePath: imagePath, date: targetTimestamp)
             inputText = ""
             pendingImage = nil
             

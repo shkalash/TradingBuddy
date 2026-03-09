@@ -17,6 +17,12 @@ struct IdentifiableNSImage: Identifiable {
     let image: NSImage
 }
 
+/// A context for editing an existing journal entry.
+struct EditContext: Identifiable {
+    let id: String
+    var text: String
+}
+
 /// The primary interface for viewing and sending trading journal entries.
 ///
 /// **Responsibilities:**
@@ -37,13 +43,10 @@ struct ChatView: View {
     @State private var viewModel: ChatViewModel
     @FocusState private var focusedField: FocusField?
     
-    @State private var editingEntryId: String? = nil
-    @State private var editingText: String = ""
+    @State private var editingContext: EditContext? = nil
     
     @State private var activePreviewURL: IdentifiableURL? = nil
     @State private var activePendingPreviewImage: IdentifiableNSImage? = nil
-    
-    @State private var isEditing = false
     
     // MARK: - Initialization
     
@@ -66,7 +69,16 @@ struct ChatView: View {
             
             inputArea
         }
-        .sheet(isPresented: $isEditing) { editSheet }
+        .sheet(item: $editingContext) { context in
+            EditSheet(context: context) { newText in
+                Task {
+                    await viewModel.updateMessage(id: context.id, newText: newText)
+                    editingContext = nil
+                }
+            } onCancel: {
+                editingContext = nil
+            }
+        }
         .sheet(item: $activePreviewURL) { item in imagePreviewSheet(for: item.url) }
         .sheet(item: $activePendingPreviewImage) { item in pendingImagePreviewSheet(for: item.image) }
         .navigationTitle(navigationTitle)
@@ -112,9 +124,7 @@ struct ChatView: View {
                             isFiltered: viewModel.viewedTag != nil || !viewModel.searchText.isEmpty,
                             chatFontSize: viewModel.chatFontSize,
                             onEdit: { id, text in
-                                editingText = text
-                                editingEntryId = id
-                                isEditing = true
+                                editingContext = EditContext(id: id, text: text)
                             },
                             onImageTap: { url in
                                 activePreviewURL = IdentifiableURL(url)
@@ -140,7 +150,8 @@ struct ChatView: View {
                 .padding(.top, 12)
             }
             .onChange(of: viewModel.filteredEntries.count) { _, _ in
-                if viewModel.highlightedMessageId == nil && viewModel.pendingScrollId == nil, let last = viewModel.filteredEntries.last {
+                // Only scroll to bottom if we are not currently in a jump sequence
+                if !viewModel.isJumping && viewModel.highlightedMessageId == nil && viewModel.pendingScrollId == nil, let last = viewModel.filteredEntries.last {
                     withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
                 }
             }
@@ -206,34 +217,40 @@ struct ChatView: View {
         Task { await viewModel.sendMessage() }
     }
     
-    private var editSheet: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("chat.edit.title").font(.headline)
-            TextEditor(text: $editingText)
-                .font(.body)
-                .frame(minHeight: 100)
-                .padding(4)
-                .background(Color(nsColor: .textBackgroundColor))
-                .cornerRadius(6)
-                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.gray.opacity(0.3)))
-            
-            HStack {
-                Spacer()
-                Button("chat.edit.cancel") { isEditing = false }.keyboardShortcut(.cancelAction)
-                Button("chat.edit.save") {
-                    if let id = editingEntryId {
-                        Task {
-                            await viewModel.updateMessage(id: id, newText: editingText)
-                            isEditing = false
-                        }
+    struct EditSheet: View {
+        let context: EditContext
+        var onSave: (String) -> Void
+        var onCancel: () -> Void
+        
+        @State private var text: String = ""
+        
+        var body: some View {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("chat.edit.title").font(.headline)
+                TextEditor(text: $text)
+                    .font(.body)
+                    .frame(minHeight: 100)
+                    .padding(4)
+                    .background(Color(nsColor: .textBackgroundColor))
+                    .cornerRadius(6)
+                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.gray.opacity(0.3)))
+                
+                HStack {
+                    Spacer()
+                    Button("chat.edit.cancel") { onCancel() }.keyboardShortcut(.cancelAction)
+                    Button("chat.edit.save") {
+                        onSave(text)
                     }
+                    .keyboardShortcut(.defaultAction)
+                    .buttonStyle(.borderedProminent)
                 }
-                .keyboardShortcut(.defaultAction)
-                .buttonStyle(.borderedProminent)
+            }
+            .padding()
+            .frame(width: 400, height: 250)
+            .onAppear {
+                text = context.text
             }
         }
-        .padding()
-        .frame(width: 400, height: 250)
     }
 
     private func imagePreviewSheet(for url: URL) -> some View {

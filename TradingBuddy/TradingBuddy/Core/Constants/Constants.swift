@@ -56,7 +56,7 @@ public enum AppConstants: Sendable {
     public enum Patterns: Sendable {
         public static let future = "(?<!\\S)/[A-Za-z0-9]+"
         public static let ticker = "(?<!\\S)\\$[A-Za-z]+"
-        public static let topic = "(?<!\\S)#[A-Za-z0-9_]+"
+        public static let topic = "(?<!\\S)#[^ \\.\\,:\\;\\n\\r]+"
     }
     
     /// Formatting constants.
