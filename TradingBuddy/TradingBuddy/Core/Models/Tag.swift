@@ -7,7 +7,7 @@ import GRDB
 /// - Storing the unique identifier (e.g., "/ES", "$AAPL") and its category.
 /// - Tracking usage history for sorting and recency logic.
 /// - Defining database relationships back to journal entries.
-public struct Tag: Codable, FetchableRecord, PersistableRecord, Hashable {
+public struct Tag: Codable, FetchableRecord, PersistableRecord, Hashable, Identifiable {
     // MARK: - Properties
     
     public var id: String // The actual tag text, e.g., "/ES", "$SPY"

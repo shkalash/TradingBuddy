@@ -46,6 +46,8 @@ public final class ChatViewModel {
     
     public var pendingImage: NSImage? = nil
     
+    public var suggestedTags: [Tag] = []
+    
     public var viewedDay: Date
     public var viewedTag: String? = nil
     
@@ -95,6 +97,10 @@ public final class ChatViewModel {
         self.viewedDay = initialDay
         
         setupSubscriptions()
+        
+        Task {
+            await loadSuggestedTags()
+        }
     }
 
     // MARK: - Setup
@@ -122,6 +128,7 @@ public final class ChatViewModel {
         self.viewedTag = nil
         do {
             self.entries = try await repository.entries(for: day)
+            await loadSuggestedTags()
             NotificationCenter.default.post(name: AppConstants.Notifications.databaseUpdated, object: nil)
         } catch {
             print("ChatViewModel: Failed to load entries: \(error)")
@@ -136,9 +143,19 @@ public final class ChatViewModel {
         self.viewedTag = tag
         do {
             self.entries = try await repository.entries(forTag: tag)
+            await loadSuggestedTags()
             NotificationCenter.default.post(name: AppConstants.Notifications.databaseUpdated, object: nil)
         } catch {
             print("ChatViewModel: Failed to load tag entries: \(error)")
+        }
+    }
+
+    @MainActor
+    private func loadSuggestedTags() async {
+        do {
+            self.suggestedTags = try await repository.topTopicTags(limit: 20)
+        } catch {
+            print("ChatViewModel: Failed to load suggested tags: \(error)")
         }
     }
 
@@ -187,6 +204,7 @@ public final class ChatViewModel {
             
             if let tag = viewedTag { await load(tag: tag) }
             else { await load(day: viewedDay) }
+            await loadSuggestedTags()
         } catch {
             print("ChatViewModel: Failed to save entry: \(error)")
         }
@@ -198,8 +216,20 @@ public final class ChatViewModel {
             try await repository.updateEntry(id: id, newText: newText)
             if let tag = viewedTag { await load(tag: tag) }
             else { await load(day: viewedDay) }
+            await loadSuggestedTags()
         } catch {
             print("ChatViewModel: Failed to update message: \(error)")
+        }
+    }
+    
+    public func appendTagToInput(_ tag: Tag) {
+        let tagText = tag.id
+        if inputText.isEmpty {
+            inputText = tagText + " "
+        } else if inputText.last == " " {
+            inputText += tagText + " "
+        } else {
+            inputText += " " + tagText + " "
         }
     }
     
@@ -301,6 +331,7 @@ public final class ChatViewModel {
         router.selection = .day(today)
         await load(day: today)
         await performSave(on: today)
+        await loadSuggestedTags()
     }
 
     @MainActor
@@ -309,6 +340,7 @@ public final class ChatViewModel {
         let snoozeHours = preferences.rolloverPromptDelayHours
         preferences.snoozedUntil = timeProvider.now.addingTimeInterval(TimeInterval(snoozeHours * 3600))
         await performSave(on: viewedDay)
+        await loadSuggestedTags()
     }
 
     public func cancelAlert() {

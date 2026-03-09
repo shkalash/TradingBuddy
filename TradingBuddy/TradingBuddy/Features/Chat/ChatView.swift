@@ -171,6 +171,8 @@ struct ChatView: View {
     
     private var inputArea: some View {
         VStack(alignment: .leading, spacing: 0) {
+            tagChips
+            
             VStack(alignment: .leading, spacing: 8) {
                 if let pendingImage = viewModel.pendingImage {
                     attachmentThumbnail(pendingImage)
@@ -198,9 +200,37 @@ struct ChatView: View {
             .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(Color.primary.opacity(0.08), lineWidth: 1))
             .shadow(color: Color.black.opacity(0.03), radius: 6, x: 0, y: 3)
             .padding(.horizontal, 20)
-            .padding(.vertical, 16)
+            .padding(.bottom, 16)
+            .padding(.top, 8)
         }
         .background(Color(nsColor: .windowBackgroundColor))
+    }
+    
+    private var tagChips: some View {
+        Group {
+            if !viewModel.suggestedTags.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(viewModel.suggestedTags) { tag in
+                            Button(action: { viewModel.appendTagToInput(tag) }) {
+                                Text(tag.id)
+                                    .font(.system(size: 11, weight: .medium))
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 4)
+                                    .background(dependencies.colorService.getColor(for: tag.type).opacity(0.1))
+                                    .foregroundStyle(dependencies.colorService.getColor(for: tag.type))
+                                    .clipShape(Capsule())
+                                    .overlay(Capsule().stroke(dependencies.colorService.getColor(for: tag.type).opacity(0.2), lineWidth: 1))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                }
+                .padding(.top, 12)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
     }
     
     // MARK: - Helpers

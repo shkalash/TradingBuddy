@@ -161,4 +161,30 @@ struct JournalRepositoryTests {
             #expect(try Tag.fetchCount(db) == 0)
         }
     }
+
+    @Test("Fetching top topic tags returns tags sorted by reference count")
+    func testTopTopicTags() async throws {
+        let (repo, _, _) = try makeSUT()
+        
+        // #tag1 used 3 times
+        _ = try await repo.saveEntry(text: "Entry #tag1", imagePath: nil as String?)
+        _ = try await repo.saveEntry(text: "Entry #tag1 again", imagePath: nil as String?)
+        _ = try await repo.saveEntry(text: "Entry #tag1 once more", imagePath: nil as String?)
+        
+        // #tag2 used 1 time
+        _ = try await repo.saveEntry(text: "Entry with #tag2", imagePath: nil as String?)
+        
+        // #tag3 used 2 times
+        _ = try await repo.saveEntry(text: "Entry #tag3", imagePath: nil as String?)
+        _ = try await repo.saveEntry(text: "Entry #tag3 again", imagePath: nil as String?)
+        
+        // $AAPL used 5 times (should be ignored because it's a ticker, not a topic)
+        _ = try await repo.saveEntry(text: "$AAPL $AAPL $AAPL $AAPL $AAPL", imagePath: nil as String?)
+        
+        let topTags = try await repo.topTopicTags(limit: 2)
+        
+        #expect(topTags.count == 2)
+        #expect(topTags[0].id == "#tag1")
+        #expect(topTags[1].id == "#tag3")
+    }
 }
