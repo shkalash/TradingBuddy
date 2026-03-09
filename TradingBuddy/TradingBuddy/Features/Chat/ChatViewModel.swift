@@ -211,9 +211,25 @@ public final class ChatViewModel {
     }
 
     @MainActor
-    public func updateMessage(id: String, newText: String) async {
+    public func updateMessage(id: String, newText: String, newImage: NSImage?, imagePath: String?) async {
         do {
-            try await repository.updateEntry(id: id, newText: newText)
+            guard let entry = try await repository.entry(id: id) else { return }
+            
+            var finalImagePath = imagePath
+            
+            // 1. If the image was removed (imagePath is nil) or replaced (newImage is not nil), 
+            // delete the old file if it existed.
+            if let oldPath = entry.imagePath, (imagePath == nil || newImage != nil) {
+                try? await imageStorage.deleteImage(at: oldPath)
+            }
+            
+            // 2. If a new image is provided, save it.
+            if let newImage = newImage {
+                finalImagePath = try? await imageStorage.saveImage(newImage, date: entry.tradingDay)
+            }
+            
+            try await repository.updateEntry(id: id, newText: newText, newImagePath: finalImagePath)
+            
             if let tag = viewedTag { await load(tag: tag) }
             else { await load(day: viewedDay) }
             await loadSuggestedTags()

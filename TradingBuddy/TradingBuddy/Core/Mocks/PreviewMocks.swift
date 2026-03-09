@@ -47,7 +47,8 @@ enum PreviewMocks {
         func saveEntry(text: String, imagePath: String?, date: Date?) async throws -> JournalEntry {
             JournalEntry(id: UUID().uuidString, text: text, timestamp: Date(), tradingDay: Date(), imagePath: imagePath)
         }
-        func updateEntry(id: String, newText: String) async throws {}
+        func updateEntry(id: String, newText: String, newImagePath: String?) async throws {}
+        func entry(id: String) async throws -> JournalEntry? { nil }
         func entries(for day: Date) async throws -> [JournalEntry] {
             [
                 JournalEntry(id: "1", text: "Mock entry for /ES", timestamp: Date(), tradingDay: day),
@@ -82,6 +83,7 @@ enum PreviewMocks {
     class MockImageStorage: ImageStorageService {
         init() {}
         func saveImage(_ image: NSImage, date: Date) async throws -> String { "" }
+        func deleteImage(at relativePath: String) async throws {}
         func getFileURL(for relativePath: String) -> URL { URL(fileURLWithPath: "") }
         func clearAllImages() throws {}
         func getBaseDirectory() -> URL { URL(fileURLWithPath: "/") }

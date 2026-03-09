@@ -51,6 +51,13 @@ public class LocalImageStorageService: ImageStorageService {
         return imagesDirectory.appendingPathComponent(relativePath)
     }
     
+    public func deleteImage(at relativePath: String) async throws {
+        let fileURL = getFileURL(for: relativePath)
+        if FileManager.default.fileExists(atPath: fileURL.path) {
+            try FileManager.default.removeItem(at: fileURL)
+        }
+    }
+    
     public func clearAllImages() throws {
         try FileManager.default.removeItem(at: imagesDirectory)
         try FileManager.default.createDirectory(at: imagesDirectory, withIntermediateDirectories: true)

@@ -21,6 +21,7 @@ struct IdentifiableNSImage: Identifiable {
 struct EditContext: Identifiable {
     let id: String
     var text: String
+    var imagePath: String?
 }
 
 /// The primary interface for viewing and sending trading journal entries.
@@ -70,9 +71,9 @@ struct ChatView: View {
             inputArea
         }
         .sheet(item: $editingContext) { context in
-            EditSheet(context: context) { newText in
+            EditSheet(dependencies: dependencies, context: context) { newText, newImage, imagePath in
                 Task {
-                    await viewModel.updateMessage(id: context.id, newText: newText)
+                    await viewModel.updateMessage(id: context.id, newText: newText, newImage: newImage, imagePath: imagePath)
                     editingContext = nil
                 }
             } onCancel: {
@@ -123,8 +124,8 @@ struct ChatView: View {
                             entry: entry,
                             isFiltered: viewModel.viewedTag != nil || !viewModel.searchText.isEmpty,
                             chatFontSize: viewModel.chatFontSize,
-                            onEdit: { id, text in
-                                editingContext = EditContext(id: id, text: text)
+                            onEdit: { id, text, imagePath in
+                                editingContext = EditContext(id: id, text: text, imagePath: imagePath)
                             },
                             onImageTap: { url in
                                 activePreviewURL = IdentifiableURL(url)
@@ -275,37 +276,91 @@ struct ChatView: View {
     }
     
     struct EditSheet: View {
+        let dependencies: any AppDependencies
         let context: EditContext
-        var onSave: (String) -> Void
+        var onSave: (String, NSImage?, String?) -> Void
         var onCancel: () -> Void
         
         @State private var text: String = ""
+        @State private var currentImagePath: String?
+        @State private var pastedImage: NSImage?
         
         var body: some View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("chat.edit.title").font(.headline)
-                TextEditor(text: $text)
-                    .font(.body)
-                    .frame(minHeight: 100)
-                    .padding(4)
-                    .background(Color(nsColor: .textBackgroundColor))
-                    .cornerRadius(6)
-                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.gray.opacity(0.3)))
+                
+                if let pasted = pastedImage {
+                    imagePreview(pasted)
+                } else if let path = currentImagePath {
+                    existingImagePreview(path)
+                }
+                
+                PasteboardTextView(
+                    text: $text,
+                    onImagePasted: { image in
+                        pastedImage = image
+                    },
+                    onSubmit: { onSave(text, pastedImage, currentImagePath) }
+                )
+                .frame(minHeight: 100)
+                .padding(4)
+                .background(Color(nsColor: .textBackgroundColor))
+                .cornerRadius(6)
+                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.gray.opacity(0.3)))
                 
                 HStack {
                     Spacer()
                     Button("chat.edit.cancel") { onCancel() }.keyboardShortcut(.cancelAction)
                     Button("chat.edit.save") {
-                        onSave(text)
+                        onSave(text, pastedImage, currentImagePath)
                     }
                     .keyboardShortcut(.defaultAction)
                     .buttonStyle(.borderedProminent)
                 }
             }
             .padding()
-            .frame(width: 400, height: 250)
+            .frame(width: 400, height: pastedImage != nil || currentImagePath != nil ? 400 : 250)
             .onAppear {
                 text = context.text
+                currentImagePath = context.imagePath
+                pastedImage = nil
+            }
+        }
+        
+        private func imagePreview(_ image: NSImage) -> some View {
+            Image(nsImage: image)
+                .resizable()
+                .scaledToFit()
+                .frame(maxHeight: 120)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .overlay(alignment: .topTrailing) {
+                    Button(action: { pastedImage = nil }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .symbolRenderingMode(.palette)
+                            .foregroundStyle(.white, Color.gray.opacity(0.9))
+                    }
+                    .buttonStyle(.plain)
+                    .offset(x: 8, y: -8)
+                }
+        }
+        
+        private func existingImagePreview(_ path: String) -> some View {
+            let url = dependencies.imageStorage.getFileURL(for: path)
+            return AsyncImage(url: url) { image in
+                image.resizable().scaledToFit()
+            } placeholder: {
+                ProgressView()
+            }
+            .frame(maxHeight: 120)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .overlay(alignment: .topTrailing) {
+                Button(action: { currentImagePath = nil }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(.white, Color.gray.opacity(0.9))
+                }
+                .buttonStyle(.plain)
+                .offset(x: 8, y: -8)
             }
         }
     }

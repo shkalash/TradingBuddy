@@ -66,7 +66,7 @@ public class GRDBJournalRepository: JournalRepository {
         return savedEntry
     }
     
-    public func updateEntry(id: String, newText: String) async throws {
+    public func updateEntry(id: String, newText: String, newImagePath: String?) async throws {
         let now = timeProvider.now
         let parsedTags = parser.extractTags(from: newText)
         
@@ -79,6 +79,7 @@ public class GRDBJournalRepository: JournalRepository {
                 .map { $0.id }
             
             entry.text = newText
+            entry.imagePath = newImagePath
             try entry.update(db)
             
             // 2. Remove all existing links for this entry
@@ -109,6 +110,12 @@ public class GRDBJournalRepository: JournalRepository {
         
         await MainActor.run {
             NotificationCenter.default.post(name: AppConstants.Notifications.databaseUpdated, object: nil)
+        }
+    }
+    
+    public func entry(id: String) async throws -> JournalEntry? {
+        try await appDb.dbWriter.read { db in
+            try JournalEntry.fetchOne(db, key: id)
         }
     }
     

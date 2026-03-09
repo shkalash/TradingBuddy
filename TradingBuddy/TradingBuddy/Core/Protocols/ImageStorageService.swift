@@ -9,6 +9,7 @@ import AppKit
 /// - Providing absolute file URLs for UI rendering.
 public protocol ImageStorageService {
     func saveImage(_ image: NSImage, date: Date) async throws -> String
+    func deleteImage(at relativePath: String) async throws
     func getFileURL(for relativePath: String) -> URL
     func clearAllImages() throws
     func getBaseDirectory() -> URL

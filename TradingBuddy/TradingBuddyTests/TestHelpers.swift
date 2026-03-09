@@ -77,10 +77,14 @@ class MockJournalRepository: JournalRepository {
         mockEntries.append(entry)
         return entry
     }
-    func updateEntry(id: String, newText: String) async throws {
+    func updateEntry(id: String, newText: String, newImagePath: String?) async throws {
         if let index = mockEntries.firstIndex(where: { $0.id == id }) {
             mockEntries[index].text = newText
+            mockEntries[index].imagePath = newImagePath
         }
+    }
+    func entry(id: String) async throws -> JournalEntry? {
+        mockEntries.first(where: { $0.id == id })
     }
     func entries(for day: Date) async throws -> [JournalEntry] {
         let normalizedDay = dayCalculator.getTradingDay(for: day)

@@ -10,7 +10,8 @@ public protocol JournalRepository {
     /// Saves a new entry. If `date` is provided, it uses that as the timestamp/trading day basis (useful for historical edits or snoozed rollovers).
     func saveEntry(text: String, imagePath: String?, date: Date?) async throws -> JournalEntry
     
-    func updateEntry(id: String, newText: String) async throws
+    func updateEntry(id: String, newText: String, newImagePath: String?) async throws
+    func entry(id: String) async throws -> JournalEntry?
     func entries(for day: Date) async throws -> [JournalEntry]
     func allTradingDays() async throws -> [Date]
     func allTags() async throws -> [Tag]

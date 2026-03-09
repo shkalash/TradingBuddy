@@ -15,7 +15,7 @@ struct MessageBubble: View {
     let isFiltered: Bool
     let chatFontSize: Double
     
-    var onEdit: (String, String) -> Void
+    var onEdit: (String, String, String?) -> Void
     var onImageTap: (URL) -> Void
     var onJumpToContext: (() -> Void)?
     
@@ -102,7 +102,7 @@ struct MessageBubble: View {
             pasteboard.clearContents()
             pasteboard.setString(entry.text, forType: .string)
         }
-        Button("chat.message.context.edit") { onEdit(entry.id, entry.text) }
+        Button("chat.message.context.edit") { onEdit(entry.id, entry.text, entry.imagePath) }
         
         if let onJump = onJumpToContext {
             Button("chat.message.context.jump") { onJump() }
