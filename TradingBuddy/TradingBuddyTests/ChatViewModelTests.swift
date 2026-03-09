@@ -109,7 +109,7 @@ struct ChatViewModelTests {
         let entry = try await repo.saveEntry(text: "Original text", imagePath: nil, date: nil)
         await vm.load(day: vm.activeTradingDay)
         
-        await vm.updateMessage(id: entry.id, newText: "Edited text")
+        await vm.updateMessage(id: entry.id, newText: "Edited text", newImage: nil, imagePath: nil)
         
         #expect(repo.mockEntries.first?.text == "Edited text")
         #expect(vm.entries.first?.text == "Edited text")
