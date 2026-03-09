@@ -134,7 +134,7 @@ public class GRDBJournalRepository: JournalRepository {
     
     public func allTags() async throws -> [Tag] {
         try await appDb.dbWriter.read { db in
-            try Tag.order(Column(AppConstants.Database.Columns.lastUsed).desc).fetchAll(db)
+            try Tag.order(Column(AppConstants.Database.Columns.id).asc).fetchAll(db)
         }
     }
     
