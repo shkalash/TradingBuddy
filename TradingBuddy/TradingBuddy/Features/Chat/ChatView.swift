@@ -170,7 +170,8 @@ struct ChatView: View {
     }
     
     private var inputArea: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        @Bindable var viewModel = viewModel
+        return VStack(alignment: .leading, spacing: 0) {
             tagChips
             
             VStack(alignment: .leading, spacing: 8) {
@@ -179,9 +180,8 @@ struct ChatView: View {
                 }
                 
                 HStack(alignment: .bottom, spacing: 12) {
-                    @Bindable var bindableViewModel = viewModel
                     PasteboardTextView(
-                        text: $bindableViewModel.inputText,
+                        text: $viewModel.inputText,
                         onImagePasted: { image in
                             viewModel.pendingImage = image
                         },
@@ -210,7 +210,7 @@ struct ChatView: View {
         Group {
             if !viewModel.suggestedTags.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
+                    LazyHStack(spacing: 8) {
                         ForEach(viewModel.suggestedTags) { tag in
                             Button(action: { viewModel.appendTagToInput(tag) }) {
                                 Text(tag.id)
@@ -226,8 +226,34 @@ struct ChatView: View {
                         }
                     }
                     .padding(.horizontal, 20)
+                    .frame(height: 32)
                 }
                 .padding(.top, 12)
+                .mask {
+                    HStack(spacing: 0) {
+                        LinearGradient(
+                            stops: [
+                                .init(color: .clear, location: 0),
+                                .init(color: .black, location: 1)
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                        .frame(width: 24)
+                        
+                        Rectangle().fill(.black)
+                        
+                        LinearGradient(
+                            stops: [
+                                .init(color: .black, location: 0),
+                                .init(color: .clear, location: 1)
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                        .frame(width: 24)
+                    }
+                }
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
@@ -243,6 +269,7 @@ struct ChatView: View {
         }
     }
     
+    @MainActor
     private func send() {
         Task { await viewModel.sendMessage() }
     }
