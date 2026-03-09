@@ -46,6 +46,7 @@ public enum AppConstants: Sendable {
         public static let isClipboardMonitoringEnabledKey = "isClipboardMonitoringEnabled"
         public static let forceFocusChatOnImageIntakeKey = "forceFocusChatOnImageIntake"
         public static let lastMigrationVersionKey = "lastMigrationVersion"
+        public static let lastNewsBriefingShownDateKey = "lastNewsBriefingShownDate"
         
         public static let debugFolder = "TradingBuddy-Debug"
         public static let productionFolder = "TradingBuddy"

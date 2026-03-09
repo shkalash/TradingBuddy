@@ -17,6 +17,7 @@ protocol AppDependencies {
     var timeProvider: TimeProvider { get }
     var dayCalculator: TradingDayCalculator { get }
     var messageParser: MessageParser { get }
+    var newsService: EconomicNewsServicing { get }
     
     // Navigation & State
     var router: AppRouter { get }

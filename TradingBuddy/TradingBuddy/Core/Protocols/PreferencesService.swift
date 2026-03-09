@@ -16,6 +16,7 @@ public protocol PreferencesService: AnyObject {
     var chatFontSize: Double { get set }
     var isClipboardMonitoringEnabled: Bool { get set }
     var forceFocusChatOnImageIntake: Bool { get set }
+    var lastNewsBriefingShownDate: Date? { get set }
     
     /// The version of the last one-shot startup migration that was successfully completed.
     var lastMigrationVersion: Int { get set }
