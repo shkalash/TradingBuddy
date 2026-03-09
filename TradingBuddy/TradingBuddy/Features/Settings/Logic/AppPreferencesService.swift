@@ -102,6 +102,18 @@ public class AppPreferencesService: PreferencesService {
         }
     }
     
+    public var lastNewsBriefingShownDate: Date? {
+        get {
+            access(keyPath: \.lastNewsBriefingShownDate)
+            return persistence.load(for: .lastNewsBriefingShownDate)
+        }
+        set {
+            withMutation(keyPath: \.lastNewsBriefingShownDate) {
+                persistence.save(value: newValue, for: .lastNewsBriefingShownDate)
+            }
+        }
+    }
+    
     public var lastMigrationVersion: Int {
         get {
             access(keyPath: \.lastMigrationVersion)

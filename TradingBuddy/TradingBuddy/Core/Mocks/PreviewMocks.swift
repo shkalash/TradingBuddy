@@ -22,6 +22,7 @@ enum PreviewMocks {
         let timeProvider: TimeProvider = MockTimeProvider()
         let dayCalculator: TradingDayCalculator = ChicagoTradingDayService()
         let messageParser: MessageParser = RegexMessageParser()
+        let newsService: EconomicNewsServicing = MockNewsService()
         let router: AppRouter = AppRouter()
         let colorService: TagColorService
         let session: AppSession
@@ -30,13 +31,28 @@ enum PreviewMocks {
         
         init() {
             self.colorService = TagColorService(persistence: persistenceHandler)
-            self.session = AppSession(dayCalculator: dayCalculator, timeProvider: timeProvider)
+            self.session = AppSession(
+                dayCalculator: dayCalculator,
+                timeProvider: timeProvider,
+                newsService: newsService,
+                preferences: preferencesService
+            )
             self.commands = AppCommands(
                 preferences: preferencesService,
                 router: router,
                 repository: repository,
                 imageStorage: imageStorage
             )
+        }
+    }
+    
+    // MARK: - Mock News Service
+    
+    class MockNewsService: EconomicNewsServicing {
+        func fetchEconomicEvents(from startDate: Date, to endDate: Date) async throws -> [EconomicEvent] {
+            return [
+                EconomicEvent(date: Date().addingTimeInterval(600), event: "Mock High Impact Event", country: "US", impact: "High", actual: nil, previous: nil, estimate: nil, unit: nil)
+            ]
         }
     }
     
@@ -104,6 +120,7 @@ enum PreviewMocks {
         var showHistoryJumpWarning: Bool = true
         var rolloverPromptDelayHours: Int = 2
         var snoozedUntil: Date? = nil
+        var lastNewsBriefingShownDate: Date? = nil
     }
 
     class MockPersistenceHandler: PersistenceHandling {

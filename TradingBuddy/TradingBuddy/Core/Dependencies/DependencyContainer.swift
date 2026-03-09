@@ -22,6 +22,7 @@ class DependencyContainer: AppDependencies, ObservableObject {
     let timeProvider: TimeProvider
     let dayCalculator: TradingDayCalculator
     let messageParser: MessageParser
+    let newsService: EconomicNewsServicing
     
     // MARK: - Navigation & State
     
@@ -46,12 +47,18 @@ class DependencyContainer: AppDependencies, ObservableObject {
         let messageParser = RegexMessageParser()
         self.messageParser = messageParser
         
+        self.newsService = FMPEconomicNewsService(apiKey: SecretsManager.fmpApiKey ?? "")
         self.pasteboardMonitor = AppPasteboardMonitor()
         
         // 2. Navigation & UI State
         self.router = AppRouter()
         self.colorService = TagColorService(persistence: persistence)
-        self.session = AppSession(dayCalculator: dayCalculator, timeProvider: timeProvider)
+        self.session = AppSession(
+            dayCalculator: dayCalculator,
+            timeProvider: timeProvider,
+            newsService: newsService,
+            preferences: preferencesService
+        )
 
         // 3. Database & Repository
         let appDb = try! AppDatabase.shared()

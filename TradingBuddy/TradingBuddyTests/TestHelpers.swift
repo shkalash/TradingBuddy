@@ -19,6 +19,7 @@ class TestDependencyContainer: AppDependencies {
     var colorService: TagColorService
     var session: AppSession
     var commands: AppCommands
+    var newsService: EconomicNewsServicing
     var pasteboardMonitor: PasteboardMonitorProviding
     
     init(
@@ -29,6 +30,7 @@ class TestDependencyContainer: AppDependencies {
         timeProvider: TimeProvider = PreviewMocks.MockTimeProvider(),
         dayCalculator: TradingDayCalculator = ChicagoTradingDayService(),
         messageParser: MessageParser = RegexMessageParser(),
+        newsService: EconomicNewsServicing = PreviewMocks.MockNewsService(),
         router: AppRouter = AppRouter()
     ) {
         self.persistenceHandler = persistenceHandler
@@ -37,9 +39,15 @@ class TestDependencyContainer: AppDependencies {
         self.timeProvider = timeProvider
         self.dayCalculator = dayCalculator
         self.messageParser = messageParser
+        self.newsService = newsService
         self.router = router
         self.colorService = TagColorService(persistence: persistenceHandler)
-        self.session = AppSession(dayCalculator: dayCalculator, timeProvider: timeProvider)
+        self.session = AppSession(
+            dayCalculator: dayCalculator,
+            timeProvider: timeProvider,
+            newsService: newsService,
+            preferences: preferencesService
+        )
         self.pasteboardMonitor = PreviewMocks.MockPasteboardMonitor()
         
         let repo = repository ?? MockJournalRepository(timeProvider: timeProvider, dayCalculator: dayCalculator)

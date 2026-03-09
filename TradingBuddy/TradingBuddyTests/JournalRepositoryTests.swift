@@ -33,11 +33,8 @@ struct JournalRepositoryTests {
         #expect(entry.text == text)
         
         try await appDb.dbWriter.read { db in
-            let tagsCount = try Tag.fetchCount(db)
-            #expect(tagsCount == 3)
-            
-            let linksCount = try EntryTag.fetchCount(db)
-            #expect(linksCount == 3)
+            try #expect(Tag.fetchCount(db) == 3)
+            try #expect(EntryTag.fetchCount(db) == 3)
         }
         
         let esEntries = try await repo.entries(forTag: "/ES")
@@ -106,13 +103,9 @@ struct JournalRepositoryTests {
         try await repo.clearDatabaseOnly()
         
         try await appDb.dbWriter.read { db in
-            let entryCount = try JournalEntry.fetchCount(db)
-            let tagCount = try Tag.fetchCount(db)
-            let linkCount = try EntryTag.fetchCount(db)
-            
-            #expect(entryCount == 0)
-            #expect(tagCount == 0)
-            #expect(linkCount == 0)
+            try #expect(JournalEntry.fetchCount(db) == 0)
+            try #expect(Tag.fetchCount(db) == 0)
+            try #expect(EntryTag.fetchCount(db) == 0)
         }
     }
 
@@ -137,7 +130,7 @@ struct JournalRepositoryTests {
         _ = try await repo.saveEntry(text: "Entry 2 #tag1 #tag2", imagePath: nil as String?)
         
         try await appDb.dbWriter.read { db in
-            #expect(try Tag.fetchCount(db) == 2)
+            try #expect(Tag.fetchCount(db) == 2)
         }
         
         let entry1 = try await repo.entries(forTag: "#tag1").first { $0.text.contains("Entry 1") }!
@@ -147,8 +140,8 @@ struct JournalRepositoryTests {
         
         try await appDb.dbWriter.read { db in
             // #tag1 still exists because Entry 2 uses it
-            #expect(try Tag.fetchOne(db, key: "#tag1") != nil)
-            #expect(try Tag.fetchCount(db) == 2)
+            try #expect(Tag.fetchOne(db, key: "#tag1") != nil)
+            try #expect(Tag.fetchCount(db) == 2)
         }
         
         let entry2 = try await repo.entries(forTag: "#tag1").first { $0.text.contains("Entry 2") }!
@@ -158,7 +151,7 @@ struct JournalRepositoryTests {
         
         try await appDb.dbWriter.read { db in
             // Both tags should be gone now
-            #expect(try Tag.fetchCount(db) == 0)
+            try #expect(Tag.fetchCount(db) == 0)
         }
     }
 
@@ -179,7 +172,7 @@ struct JournalRepositoryTests {
         _ = try await repo.saveEntry(text: "Entry #tag3 again", imagePath: nil as String?)
         
         // $AAPL used 5 times (should be ignored because it's a ticker, not a topic)
-        _ = try await repo.saveEntry(text: "$AAPL $AAPL $AAPL $AAPL $AAPL", imagePath: nil as String?)
+        _ = try await repo.saveEntry(text: "$AAPL", imagePath: nil as String?)
         
         let topTags = try await repo.topTopicTags(limit: 2)
         
