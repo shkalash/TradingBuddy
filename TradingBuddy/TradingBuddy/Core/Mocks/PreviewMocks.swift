@@ -65,6 +65,7 @@ enum PreviewMocks {
         func entries(forTag tagId: String) async throws -> [JournalEntry] {
             [JournalEntry(id: "1", text: "Tag entry for \(tagId)", timestamp: Date(), tradingDay: Date())]
         }
+        func cleanupOrphanedTags() async throws {}
         func clearDatabaseOnly() async throws {}
         func clearDatabaseAndImages() async throws {}
     }
@@ -89,6 +90,7 @@ enum PreviewMocks {
         var chatFontSize: Double = 14.0
         var isClipboardMonitoringEnabled: Bool = true
         var forceFocusChatOnImageIntake: Bool = true
+        var lastMigrationVersion: Int = 0
         init() {}
         var showHistoryJumpWarning: Bool = true
         var rolloverPromptDelayHours: Int = 2

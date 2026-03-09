@@ -30,6 +30,7 @@ extension PersistenceKey {
     static var snoozedUntil: PersistenceKey<Date> { .init(name: AppConstants.Storage.snoozedUntilKey) }
     static var isClipboardMonitoringEnabled: PersistenceKey<Bool> { .init(name: AppConstants.Storage.isClipboardMonitoringEnabledKey) }
     static var forceFocusChatOnImageIntake: PersistenceKey<Bool> { .init(name: AppConstants.Storage.forceFocusChatOnImageIntakeKey) }
+    static var lastMigrationVersion: PersistenceKey<Int> { .init(name: AppConstants.Storage.lastMigrationVersionKey) }
     
     // Colors
     static var tagCategoryColors: PersistenceKey<[String: String]> { .init(name: AppConstants.Storage.tagCategoryColorsKey) }

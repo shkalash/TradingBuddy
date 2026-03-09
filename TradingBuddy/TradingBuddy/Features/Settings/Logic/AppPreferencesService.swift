@@ -101,4 +101,16 @@ public class AppPreferencesService: PreferencesService {
             }
         }
     }
+    
+    public var lastMigrationVersion: Int {
+        get {
+            access(keyPath: \.lastMigrationVersion)
+            return persistence.load(for: .lastMigrationVersion) ?? 0
+        }
+        set {
+            withMutation(keyPath: \.lastMigrationVersion) {
+                persistence.save(value: newValue, for: .lastMigrationVersion)
+            }
+        }
+    }
 }
