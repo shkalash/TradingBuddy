@@ -126,7 +126,8 @@ final class AppSessionTests: XCTestCase {
 
 // MARK: - Helper Mocks for Tests
 
-class MockNewsService: EconomicNewsServicing {
+@MainActor
+final class MockNewsService: EconomicNewsServicing {
     var stubbedEvents: [EconomicEvent] = []
     
     func fetchEconomicEvents(from startDate: Date, to endDate: Date) async throws -> [EconomicEvent] {

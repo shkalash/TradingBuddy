@@ -23,46 +23,62 @@ class TestDependencyContainer: AppDependencies {
     var pasteboardMonitor: PasteboardMonitorProviding
     
     init(
-        persistenceHandler: PersistenceHandling = PreviewMocks.MockPersistenceHandler(),
-        preferencesService: PreferencesService = PreviewMocks.MockPreferences(),
+        persistenceHandler: PersistenceHandling? = nil,
+        preferencesService: PreferencesService? = nil,
         repository: JournalRepository? = nil,
-        imageStorage: ImageStorageService = PreviewMocks.MockImageStorage(),
-        timeProvider: TimeProvider = PreviewMocks.MockTimeProvider(),
-        dayCalculator: TradingDayCalculator = ChicagoTradingDayService(),
-        messageParser: MessageParser = RegexMessageParser(),
-        newsService: EconomicNewsServicing = PreviewMocks.MockNewsService(),
-        router: AppRouter = AppRouter()
+        imageStorage: ImageStorageService? = nil,
+        timeProvider: TimeProvider? = nil,
+        dayCalculator: TradingDayCalculator? = nil,
+        messageParser: MessageParser? = nil,
+        newsService: EconomicNewsServicing? = nil,
+        router: AppRouter? = nil
     ) {
-        self.persistenceHandler = persistenceHandler
-        self.preferencesService = preferencesService
-        self.imageStorage = imageStorage
-        self.timeProvider = timeProvider
-        self.dayCalculator = dayCalculator
-        self.messageParser = messageParser
-        self.newsService = newsService
-        self.router = router
-        self.colorService = TagColorService(persistence: persistenceHandler)
+        let ph = persistenceHandler ?? PreviewMocks.MockPersistenceHandler()
+        self.persistenceHandler = ph
+        
+        let prefs = preferencesService ?? PreviewMocks.MockPreferences()
+        self.preferencesService = prefs
+        
+        self.imageStorage = imageStorage ?? PreviewMocks.MockImageStorage()
+        
+        let tp = timeProvider ?? PreviewMocks.MockTimeProvider()
+        self.timeProvider = tp
+        
+        let dc = dayCalculator ?? ChicagoTradingDayService()
+        self.dayCalculator = dc
+        
+        let mp = messageParser ?? RegexMessageParser()
+        self.messageParser = mp
+        
+        let ns = newsService ?? PreviewMocks.MockNewsService()
+        self.newsService = ns
+        
+        let r = router ?? AppRouter()
+        self.router = r
+        
+        self.colorService = TagColorService(persistence: ph)
         self.session = AppSession(
-            dayCalculator: dayCalculator,
-            timeProvider: timeProvider,
-            newsService: newsService,
-            preferences: preferencesService
+            dayCalculator: dc,
+            timeProvider: tp,
+            newsService: ns,
+            preferences: prefs
         )
         self.pasteboardMonitor = PreviewMocks.MockPasteboardMonitor()
         
-        let repo = repository ?? MockJournalRepository(timeProvider: timeProvider, dayCalculator: dayCalculator)
+        let repo = repository ?? MockJournalRepository(timeProvider: tp, dayCalculator: dc)
         self.repository = repo
         
         self.commands = AppCommands(
-            preferences: preferencesService,
-            router: router,
+            preferences: prefs,
+            router: r,
             repository: repo,
-            imageStorage: imageStorage
+            imageStorage: self.imageStorage
         )
     }
 }
 
-class MutableTimeProvider: TimeProvider {
+@MainActor
+final class MutableTimeProvider: TimeProvider {
     var now: Date
     init(now: Date) { self.now = now }
 }
