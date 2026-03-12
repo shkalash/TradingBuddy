@@ -1,7 +1,7 @@
 import Foundation
 
 /// A structured representation of a tag extracted from raw text.
-public struct ParsedTag: Equatable {
+public struct ParsedTag: Equatable, Hashable, Sendable {
     public let id: String
     public let type: TagType
 }

@@ -187,4 +187,22 @@ struct JournalRepositoryTests {
         #expect(topTags[0].id == "#tag1")
         #expect(topTags[1].id == "#tag3")
     }
+
+    @Test("Saving an entry with duplicate tags should succeed and aggregate them")
+    func testDuplicateTagsAggregation() async throws {
+        let (repo, appDb, _) = try makeSUT()
+        
+        let text = "Duplicate tags: #tilt #tilt /ES /ES $AAPL $AAPL"
+        let entry = try await repo.saveEntry(text: text, imagePath: nil as String?)
+        
+        #expect(entry.text == text)
+        
+        try await appDb.dbWriter.read { db in
+            // Should only have 3 tags in the DB: #tilt, /ES, $AAPL
+            try #expect(Tag.fetchCount(db) == 3)
+            
+            // Should only have 3 links in the join table
+            try #expect(EntryTag.fetchCount(db) == 3)
+        }
+    }
 }

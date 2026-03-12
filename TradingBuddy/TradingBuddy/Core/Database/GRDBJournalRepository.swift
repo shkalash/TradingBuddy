@@ -35,7 +35,7 @@ public class GRDBJournalRepository: JournalRepository {
     public func saveEntry(text: String, imagePath: String?, date: Date? = nil) async throws -> JournalEntry {
         let currentRealTime = date ?? timeProvider.now
         let calculatedDay = dayCalculator.getTradingDay(for: currentRealTime)
-        let extractedTags = parser.extractTags(from: text)
+        let extractedTags = Array(Set(parser.extractTags(from: text)))
         
         let savedEntry = try await appDb.dbWriter.write { db -> JournalEntry in
             let newEntry = JournalEntry(
@@ -68,7 +68,7 @@ public class GRDBJournalRepository: JournalRepository {
     
     public func updateEntry(id: String, newText: String, newImagePath: String?) async throws {
         let now = timeProvider.now
-        let parsedTags = parser.extractTags(from: newText)
+        let parsedTags = Array(Set(parser.extractTags(from: newText)))
         
         try await appDb.dbWriter.write { db in
             guard var entry = try JournalEntry.fetchOne(db, key: id) else { return }
