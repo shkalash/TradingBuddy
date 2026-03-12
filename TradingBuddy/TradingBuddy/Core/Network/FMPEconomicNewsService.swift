@@ -39,7 +39,7 @@ public final class FMPEconomicNewsService: EconomicNewsServicing {
         let startString = formatter.string(from: startDate)
         let endString = formatter.string(from: endDate)
         
-        let urlString = "https://financialmodelingprep.com/api/v3/economic_calendar?from=\(startString)&to=\(endString)&apikey=\(apiKey)"
+        let urlString = "https://financialmodelingprep.com/stable/economic-calendar?from=\(startString)&to=\(endString)&apikey=\(apiKey)"
         
         guard let url = URL(string: urlString) else {
             throw URLError(.badURL)
