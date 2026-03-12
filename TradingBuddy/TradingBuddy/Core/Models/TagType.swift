@@ -6,7 +6,7 @@ import GRDB
 /// **Responsibilities:**
 /// - Providing a standardized set of categories for tag parsing and UI colorization.
 /// - Supporting string-based persistence for database storage.
-public enum TagType: String, Codable, CaseIterable {
+public enum TagType: String, Codable, CaseIterable, Sendable {
     case future
     case ticker
     case topic
