@@ -54,13 +54,19 @@ class DependencyContainer: AppDependencies, ObservableObject {
         self.session = AppSession(dayCalculator: dayCalculator, timeProvider: timeProvider)
 
         // 3. Database & Repository
-        let appDb = try! AppDatabase.shared()
-        self.repository = GRDBJournalRepository(
-            appDb: appDb,
-            timeProvider: timeProvider,
-            dayCalculator: dayCalculator,
-            parser: messageParser
-        )
+        do {
+            let appDb = try AppDatabase.shared()
+            self.repository = GRDBJournalRepository(
+                appDb: appDb,
+                timeProvider: timeProvider,
+                dayCalculator: dayCalculator,
+                parser: messageParser
+            )
+        } catch {
+            // Database failed to open — this is unrecoverable. Log and terminate
+            // with a meaningful message rather than a cryptic EXC_BAD_INSTRUCTION.
+            fatalError("TradingBuddy: Failed to open database — \(error)")
+        }
         
         // 4. Command Layer
         self.commands = AppCommands(
