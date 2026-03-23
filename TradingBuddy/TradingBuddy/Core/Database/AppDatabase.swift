@@ -11,6 +11,11 @@ public struct AppDatabase {
     // MARK: - Properties
     
     public let dbWriter: any DatabaseWriter
+
+    /// Use this for all read-only queries. On a DatabasePool this runs
+    /// concurrently with writes; on a DatabaseQueue it shares the same
+    /// serial queue but is still the correct API to signal intent.
+    public var dbReader: any DatabaseReader { dbWriter }
     
     // MARK: - Initialization
     
