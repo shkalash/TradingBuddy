@@ -129,7 +129,7 @@ public final class ChatViewModel {
         do {
             self.entries = try await repository.entries(for: day)
             await loadSuggestedTags()
-            NotificationCenter.default.post(name: AppConstants.Notifications.databaseUpdated, object: nil)
+            NotificationCenter.default.post(name: AppConstants.Notifications.databaseUpdated, object: self)
         } catch {
             print("ChatViewModel: Failed to load entries: \(error)")
         }
@@ -144,7 +144,7 @@ public final class ChatViewModel {
         do {
             self.entries = try await repository.entries(forTag: tag)
             await loadSuggestedTags()
-            NotificationCenter.default.post(name: AppConstants.Notifications.databaseUpdated, object: nil)
+            NotificationCenter.default.post(name: AppConstants.Notifications.databaseUpdated, object: self)
         } catch {
             print("ChatViewModel: Failed to load tag entries: \(error)")
         }
@@ -166,9 +166,13 @@ public final class ChatViewModel {
         let now = timeProvider.now
         let currentActiveDay = activeTradingDay
 
+        // Snoozed: bypass all prompts and save immediately
         if let snoozedUntil = preferences.snoozedUntil, now < snoozedUntil {
-            // Snoozed, continue
-        } else if currentActiveDay != viewedDay && viewedTag == nil {
+            await performSave(on: viewedDay)
+            return
+        }
+
+        if currentActiveDay != viewedDay && viewedTag == nil {
             activeAlert = .rolloverPrompt
             showAlert = true
             return
