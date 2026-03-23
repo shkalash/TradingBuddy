@@ -96,7 +96,10 @@ struct ChatView: View {
                 case .tag(let tagId): await viewModel.load(tag: tagId)
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: AppConstants.Notifications.databaseUpdated)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: AppConstants.Notifications.databaseUpdated)) { notification in
+            // ChatViewModel already reloads after its own writes.
+            // Only react to notifications posted by other components (object != viewModel).
+            guard (notification.object as AnyObject?) !== (viewModel as AnyObject) else { return }
             Task {
                 if let selection = dependencies.router.selection {
                     switch selection {
