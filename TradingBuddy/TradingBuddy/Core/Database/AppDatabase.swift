@@ -39,26 +39,44 @@ public struct AppDatabase {
         #if DEBUG
         migrator.eraseDatabaseOnSchemaChange = true
         #endif
-        
-        migrator.registerMigration(AppConstants.Database.Migrations.createJournal) { db in
-            try db.create(table: AppConstants.Database.journalTable) { t in
-                t.column(AppConstants.Database.Columns.id, .text).primaryKey()
-                t.column(AppConstants.Database.Columns.text, .text).notNull()
-                t.column(AppConstants.Database.Columns.timestamp, .datetime).notNull().indexed()
-                t.column(AppConstants.Database.Columns.tradingDay, .datetime).notNull().indexed()
-                t.column(AppConstants.Database.Columns.imagePath, .text)
+
+        // Capture all AppConstants strings as plain locals before entering the
+        // Sendable GRDB migration closure — the closure is nonisolated and Swift 6
+        // rejects direct access to static properties through the @MainActor-inferred
+        // AppConstants namespace from inside it.
+        let migrationName   = AppConstants.Database.Migrations.createJournal
+        let journalTable    = AppConstants.Database.journalTable
+        let tagTable        = AppConstants.Database.tagTable
+        let entryTagTable   = AppConstants.Database.entryTagTable
+        let colId           = AppConstants.Database.Columns.id
+        let colText         = AppConstants.Database.Columns.text
+        let colTimestamp    = AppConstants.Database.Columns.timestamp
+        let colTradingDay   = AppConstants.Database.Columns.tradingDay
+        let colImagePath    = AppConstants.Database.Columns.imagePath
+        let colType         = AppConstants.Database.Columns.type
+        let colLastUsed     = AppConstants.Database.Columns.lastUsed
+        let colEntryId      = AppConstants.Database.Columns.entryId
+        let colTagId        = AppConstants.Database.Columns.tagId
+
+        migrator.registerMigration(migrationName) { db in
+            try db.create(table: journalTable) { t in
+                t.column(colId, .text).primaryKey()
+                t.column(colText, .text).notNull()
+                t.column(colTimestamp, .datetime).notNull().indexed()
+                t.column(colTradingDay, .datetime).notNull().indexed()
+                t.column(colImagePath, .text)
             }
-            
-            try db.create(table: AppConstants.Database.tagTable) { t in
-                t.column(AppConstants.Database.Columns.id, .text).primaryKey()
-                t.column(AppConstants.Database.Columns.type, .text).notNull()
-                t.column(AppConstants.Database.Columns.lastUsed, .datetime).notNull()
+
+            try db.create(table: tagTable) { t in
+                t.column(colId, .text).primaryKey()
+                t.column(colType, .text).notNull()
+                t.column(colLastUsed, .datetime).notNull()
             }
-            
-            try db.create(table: AppConstants.Database.entryTagTable) { t in
-                t.column(AppConstants.Database.Columns.entryId, .text).notNull().references(AppConstants.Database.journalTable, onDelete: .cascade)
-                t.column(AppConstants.Database.Columns.tagId, .text).notNull().references(AppConstants.Database.tagTable, onDelete: .cascade)
-                t.primaryKey([AppConstants.Database.Columns.entryId, AppConstants.Database.Columns.tagId])
+
+            try db.create(table: entryTagTable) { t in
+                t.column(colEntryId, .text).notNull().references(journalTable, onDelete: .cascade)
+                t.column(colTagId, .text).notNull().references(tagTable, onDelete: .cascade)
+                t.primaryKey([colEntryId, colTagId])
             }
         }
         
