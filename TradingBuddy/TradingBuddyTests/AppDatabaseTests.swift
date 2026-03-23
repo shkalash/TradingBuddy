@@ -57,7 +57,7 @@ struct AppDatabaseTests {
         }
         #expect(linkCountBefore == 1)
 
-        try appDb.dbWriter.write { db in
+        _ = try appDb.dbWriter.write { db in
             try entry.delete(db)
         }
 
