@@ -114,13 +114,13 @@ public class GRDBJournalRepository: JournalRepository {
     }
     
     public func entry(id: String) async throws -> JournalEntry? {
-        try await appDb.dbWriter.read { db in
+        try await appDb.dbReader.read { db in
             try JournalEntry.fetchOne(db, key: id)
         }
     }
     
     public func entries(for day: Date) async throws -> [JournalEntry] {
-        try await appDb.dbWriter.read { db in
+        try await appDb.dbReader.read { db in
             try JournalEntry
                 .filter(Column(AppConstants.Database.Columns.tradingDay) == day)
                 .order(Column(AppConstants.Database.Columns.timestamp).asc)
@@ -129,7 +129,7 @@ public class GRDBJournalRepository: JournalRepository {
     }
     
     public func allTradingDays() async throws -> [Date] {
-        try await appDb.dbWriter.read { db in
+        try await appDb.dbReader.read { db in
             let request = JournalEntry
                 .select(Column(AppConstants.Database.Columns.tradingDay))
                 .distinct()
@@ -140,13 +140,13 @@ public class GRDBJournalRepository: JournalRepository {
     }
     
     public func allTags() async throws -> [Tag] {
-        try await appDb.dbWriter.read { db in
+        try await appDb.dbReader.read { db in
             try Tag.order(Column(AppConstants.Database.Columns.id).asc).fetchAll(db)
         }
     }
     
     public func entries(forTag tagId: String) async throws -> [JournalEntry] {
-        try await appDb.dbWriter.read { db in
+        try await appDb.dbReader.read { db in
             try JournalEntry
                 .joining(required: JournalEntry.tags.filter(Column(AppConstants.Database.Columns.id) == tagId))
                 .order(Column(AppConstants.Database.Columns.timestamp).asc)
@@ -155,7 +155,7 @@ public class GRDBJournalRepository: JournalRepository {
     }
     
     public func topTopicTags(limit: Int) async throws -> [Tag] {
-        try await appDb.dbWriter.read { db in
+        try await appDb.dbReader.read { db in
             let sql = """
             SELECT tag.*
             FROM tag
@@ -171,13 +171,11 @@ public class GRDBJournalRepository: JournalRepository {
     
     public func cleanupOrphanedTags() async throws {
         try await appDb.dbWriter.write { db in
-            let allTags = try Tag.fetchAll(db)
-            for tag in allTags {
-                let count = try EntryTag.filter(Column(AppConstants.Database.Columns.tagId) == tag.id).fetchCount(db)
-                if count == 0 {
-                    try Tag.filter(Column(AppConstants.Database.Columns.id) == tag.id).deleteAll(db)
-                }
-            }
+            // Single DELETE instead of N+1 fetchCount loop
+            try db.execute(sql: """
+                DELETE FROM tag
+                WHERE id NOT IN (SELECT DISTINCT tagId FROM entryTag)
+            """)
         }
     }
     
