@@ -84,6 +84,7 @@ struct ChatView: View {
         .sheet(item: $activePendingPreviewImage) { item in pendingImagePreviewSheet(for: item.image) }
         .navigationTitle(navigationTitle)
         .searchable(text: $bindableViewModel.searchText, prompt: Text("chat.search.placeholder"))
+        .accessibilityIdentifier("chatView")
         .alert(Text("chat.alert.notice.title"), isPresented: $bindableViewModel.showAlert, presenting: viewModel.activeAlert) { alert in
             alertButtons(for: alert)
         } message: { alert in
@@ -96,10 +97,7 @@ struct ChatView: View {
                 case .tag(let tagId): await viewModel.load(tag: tagId)
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: AppConstants.Notifications.databaseUpdated)) { notification in
-            // ChatViewModel already reloads after its own writes.
-            // Only react to notifications posted by other components (object != viewModel).
-            guard (notification.object as AnyObject?) !== (viewModel as AnyObject) else { return }
+        .onReceive(NotificationCenter.default.publisher(for: AppConstants.Notifications.databaseUpdated)) { _ in
             Task {
                 if let selection = dependencies.router.selection {
                     switch selection {
@@ -122,7 +120,7 @@ struct ChatView: View {
                 LazyVStack(alignment: .leading, spacing: 16) {
                     ForEach(viewModel.filteredEntries) { entry in
                         let isHighlighted = viewModel.highlightedMessageId == entry.id
-                        
+
                         MessageBubble(
                             entry: entry,
                             isFiltered: viewModel.viewedTag != nil || !viewModel.searchText.isEmpty,
@@ -139,6 +137,7 @@ struct ChatView: View {
                             dependencies: dependencies
                         )
                         .id(entry.id)
+                        .accessibilityIdentifier("messageBubble-\(entry.id)")
                         .padding(4)
                         .overlay(
                             RoundedRectangle(cornerRadius: 16)
@@ -194,6 +193,7 @@ struct ChatView: View {
                     .focused($focusedField, equals: .chatInput)
                     .frame(minHeight: 22, maxHeight: 150)
                     .padding(.vertical, 12)
+                    .accessibilityIdentifier("chatInput")
                     
                     sendButton
                 }
@@ -455,6 +455,7 @@ struct ChatView: View {
         .buttonStyle(.plain)
         .disabled(viewModel.inputText.isEmpty && viewModel.pendingImage == nil)
         .padding(.bottom, 10)
+        .accessibilityIdentifier("sendButton")
     }
 
     @ViewBuilder
