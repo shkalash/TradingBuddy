@@ -15,6 +15,15 @@ public class GRDBJournalRepository: JournalRepository {
     private let timeProvider: TimeProvider
     private let dayCalculator: TradingDayCalculator
     private let parser: MessageParser
+
+    // Column name shorthands captured at struct level — plain String values are
+    // safe to reference from nonisolated Sendable GRDB closures without triggering
+    // Swift 6 MainActor isolation errors.
+    private let colId        = AppConstants.Database.Columns.id
+    private let colEntryId   = AppConstants.Database.Columns.entryId
+    private let colTagId     = AppConstants.Database.Columns.tagId
+    private let colTradingDay = AppConstants.Database.Columns.tradingDay
+    private let colTimestamp = AppConstants.Database.Columns.timestamp
     
     // MARK: - Initialization
     
@@ -74,7 +83,7 @@ public class GRDBJournalRepository: JournalRepository {
             guard var entry = try JournalEntry.fetchOne(db, key: id) else { return }
             
             // 1. Capture old tags to check for orphans later
-            let oldTagIds = try Tag.joining(required: Tag.entryTags.filter(Column(AppConstants.Database.Columns.entryId) == id))
+            let oldTagIds = try Tag.joining(required: Tag.entryTags.filter(Column(colEntryId) == id))
                 .fetchAll(db)
                 .map { $0.id }
             
@@ -83,7 +92,7 @@ public class GRDBJournalRepository: JournalRepository {
             try entry.update(db)
             
             // 2. Remove all existing links for this entry
-            try EntryTag.filter(Column(AppConstants.Database.Columns.entryId) == id).deleteAll(db)
+            try EntryTag.filter(Column(colEntryId) == id).deleteAll(db)
             
             // 3. Create new tags and links
             for pTag in parsedTags {
@@ -101,9 +110,9 @@ public class GRDBJournalRepository: JournalRepository {
             
             // 4. Cleanup orphaned tags (tags with no more entries)
             for oldTagId in oldTagIds {
-                let count = try EntryTag.filter(Column(AppConstants.Database.Columns.tagId) == oldTagId).fetchCount(db)
+                let count = try EntryTag.filter(Column(colTagId) == oldTagId).fetchCount(db)
                 if count == 0 {
-                    try Tag.filter(Column(AppConstants.Database.Columns.id) == oldTagId).deleteAll(db)
+                    try Tag.filter(Column(colId) == oldTagId).deleteAll(db)
                 }
             }
         }
@@ -122,8 +131,8 @@ public class GRDBJournalRepository: JournalRepository {
     public func entries(for day: Date) async throws -> [JournalEntry] {
         try await appDb.dbReader.read { db in
             try JournalEntry
-                .filter(Column(AppConstants.Database.Columns.tradingDay) == day)
-                .order(Column(AppConstants.Database.Columns.timestamp).asc)
+                .filter(Column(colTradingDay) == day)
+                .order(Column(colTimestamp).asc)
                 .fetchAll(db)
         }
     }
@@ -131,9 +140,9 @@ public class GRDBJournalRepository: JournalRepository {
     public func allTradingDays() async throws -> [Date] {
         try await appDb.dbReader.read { db in
             let request = JournalEntry
-                .select(Column(AppConstants.Database.Columns.tradingDay))
+                .select(Column(colTradingDay))
                 .distinct()
-                .order(Column(AppConstants.Database.Columns.tradingDay).desc)
+                .order(Column(colTradingDay).desc)
             
             return try Date.fetchAll(db, request)
         }
@@ -141,15 +150,15 @@ public class GRDBJournalRepository: JournalRepository {
     
     public func allTags() async throws -> [Tag] {
         try await appDb.dbReader.read { db in
-            try Tag.order(Column(AppConstants.Database.Columns.id).asc).fetchAll(db)
+            try Tag.order(Column(colId).asc).fetchAll(db)
         }
     }
     
     public func entries(forTag tagId: String) async throws -> [JournalEntry] {
         try await appDb.dbReader.read { db in
             try JournalEntry
-                .joining(required: JournalEntry.tags.filter(Column(AppConstants.Database.Columns.id) == tagId))
-                .order(Column(AppConstants.Database.Columns.timestamp).asc)
+                .joining(required: JournalEntry.tags.filter(Column(colId) == tagId))
+                .order(Column(colTimestamp).asc)
                 .fetchAll(db)
         }
     }
