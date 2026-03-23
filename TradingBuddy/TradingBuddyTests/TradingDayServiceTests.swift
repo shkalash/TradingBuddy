@@ -37,6 +37,36 @@ struct TradingDayServiceTests {
         #expect(day == expectedDay)
     }
 
+    @Test("Exact rollover boundary: 5:00 PM CT rolls to next day")
+    func testExactRolloverBoundary() {
+        // hour >= 17 means 17:00:00 is already the next session
+        let input = createChicagoDate(month: 3, day: 5, hour: 17, minute: 0) // Thursday 5:00 PM exactly
+        let result = service.getTradingDay(for: input)
+        verify(actual: result, expectedMonth: 3, expectedDay: 6) // Friday
+    }
+
+    @Test("One minute before rollover stays on the same day")
+    func testJustBeforeRollover() {
+        let input = createChicagoDate(month: 3, day: 5, hour: 16, minute: 59) // Thursday 4:59 PM
+        let result = service.getTradingDay(for: input)
+        verify(actual: result, expectedMonth: 3, expectedDay: 5) // Thursday
+    }
+
+    @Test("DST (summer, CDT): rollover still fires at 5 PM Chicago time")
+    func testRolloverDuringDST() {
+        // June is CDT (UTC-5) — rollover is still 5 PM Chicago local, not 6 PM ET
+        let input = createChicagoDate(year: 2026, month: 6, day: 10, hour: 17, minute: 0) // Wednesday 5:00 PM CDT
+        let result = service.getTradingDay(for: input)
+        verify(actual: result, expectedMonth: 6, expectedDay: 11) // Thursday
+    }
+
+    @Test("DST (summer, CDT): mid-afternoon stays on same day")
+    func testMidDayDuringDST() {
+        let input = createChicagoDate(year: 2026, month: 6, day: 10, hour: 14, minute: 0) // Wednesday 2:00 PM CDT
+        let result = service.getTradingDay(for: input)
+        verify(actual: result, expectedMonth: 6, expectedDay: 10) // Wednesday
+    }
+
     @Test("Standard mid-day trading falls on the same calendar day")
     func testMidDay() {
         let input = createChicagoDate(month: 3, day: 5, hour: 14, minute: 0) // Thursday 2:00 PM
