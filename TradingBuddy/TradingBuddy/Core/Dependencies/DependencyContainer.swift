@@ -32,7 +32,7 @@ class DependencyContainer: AppDependencies, ObservableObject {
     
     // MARK: - Initialization
     
-    init() {
+    init(inMemory: Bool = false) {
         // 1. Core Utilities & Storage
         let persistence = UserDefaultsPersistenceHandler()
         self.persistenceHandler = persistence
@@ -55,7 +55,7 @@ class DependencyContainer: AppDependencies, ObservableObject {
 
         // 3. Database & Repository
         do {
-            let appDb = try AppDatabase.shared()
+            let appDb = try inMemory ? AppDatabase(DatabaseQueue()) : AppDatabase.shared()
             self.repository = GRDBJournalRepository(
                 appDb: appDb,
                 timeProvider: timeProvider,

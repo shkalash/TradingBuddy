@@ -16,7 +16,9 @@ struct TradingBuddyApp: App {
     // MARK: - Initialization
     
     init() {
-        self.dependencies = DependencyContainer()
+        self.dependencies = DependencyContainer(
+            inMemory: ProcessInfo.processInfo.arguments.contains("-UITesting")
+        )
     }
     
     // MARK: - Body
