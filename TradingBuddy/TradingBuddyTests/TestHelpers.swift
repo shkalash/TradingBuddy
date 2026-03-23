@@ -6,17 +6,14 @@ import Combine
 
 // MARK: - MutableTimeProvider
 
-/// A mutable TimeProvider for tests. Use this instead of PreviewMocks.MockTimeProvider,
-/// which returns a new Date() on every access and can't be controlled.
-class MutableTimeProvider: TimeProvider {
+/// A mutable TimeProvider for tests. Marked @unchecked Sendable because `now`
+/// is only mutated from the test's main actor context — safe in practice.
+class MutableTimeProvider: TimeProvider, @unchecked Sendable {
     var now: Date
     init(now: Date) { self.now = now }
 }
 
 // MARK: - MockPersistenceHandler
-//
-// Single shared implementation used by AppPreferencesServiceTests,
-// TagColorServiceTests, and any other test that needs persistence.
 
 class MockPersistenceHandler: PersistenceHandling {
     var storage: [String: Any] = [:]
@@ -100,6 +97,10 @@ class MockJournalRepository: JournalRepository {
 
 // MARK: - TestDependencyContainer
 
+// Default parameter expressions cannot call @MainActor-isolated inits from a
+// nonisolated context in Swift 6. Remove all defaults that invoke @MainActor
+// types and require callers to supply them explicitly (or use the @MainActor
+// factory below).
 @MainActor
 class TestDependencyContainer: AppDependencies {
     var persistenceHandler: PersistenceHandling
@@ -116,14 +117,14 @@ class TestDependencyContainer: AppDependencies {
     var pasteboardMonitor: PasteboardMonitorProviding
 
     init(
-        persistenceHandler: PersistenceHandling = PreviewMocks.MockPersistenceHandler(),
-        preferencesService: PreferencesService = PreviewMocks.MockPreferences(),
-        repository: JournalRepository? = nil,
-        imageStorage: ImageStorageService = PreviewMocks.MockImageStorage(),
-        timeProvider: TimeProvider = MutableTimeProvider(now: Date()),
-        dayCalculator: TradingDayCalculator = ChicagoTradingDayService(),
-        messageParser: MessageParser = RegexMessageParser(),
-        router: AppRouter = AppRouter()
+        persistenceHandler: PersistenceHandling,
+        preferencesService: PreferencesService,
+        repository: JournalRepository,
+        imageStorage: ImageStorageService,
+        timeProvider: TimeProvider,
+        dayCalculator: TradingDayCalculator,
+        messageParser: MessageParser,
+        router: AppRouter
     ) {
         self.persistenceHandler = persistenceHandler
         self.preferencesService = preferencesService
@@ -135,15 +136,38 @@ class TestDependencyContainer: AppDependencies {
         self.colorService = TagColorService(persistence: persistenceHandler)
         self.session = AppSession(dayCalculator: dayCalculator, timeProvider: timeProvider)
         self.pasteboardMonitor = PreviewMocks.MockPasteboardMonitor()
-
-        let repo = repository ?? MockJournalRepository(timeProvider: timeProvider, dayCalculator: dayCalculator)
-        self.repository = repo
+        self.repository = repository
 
         self.commands = AppCommands(
             preferences: preferencesService,
             router: router,
-            repository: repo,
+            repository: repository,
             imageStorage: imageStorage
+        )
+    }
+
+    /// Convenience factory — all @MainActor-isolated inits called safely here.
+    static func make(
+        timeProvider: TimeProvider,
+        repository: JournalRepository? = nil,
+        preferencesService: PreferencesService? = nil,
+        router: AppRouter? = nil
+    ) -> TestDependencyContainer {
+        let prefs = preferencesService ?? PreviewMocks.MockPreferences()
+        let tp    = timeProvider
+        let dc    = ChicagoTradingDayService()
+        let repo  = repository ?? MockJournalRepository(timeProvider: tp, dayCalculator: dc)
+        let r     = router ?? AppRouter()
+
+        return TestDependencyContainer(
+            persistenceHandler: PreviewMocks.MockPersistenceHandler(),
+            preferencesService: prefs,
+            repository: repo,
+            imageStorage: PreviewMocks.MockImageStorage(),
+            timeProvider: tp,
+            dayCalculator: dc,
+            messageParser: RegexMessageParser(),
+            router: r
         )
     }
 }
