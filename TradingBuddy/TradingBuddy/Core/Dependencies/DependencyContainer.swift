@@ -1,7 +1,7 @@
 import Foundation
 import Combine
 import SwiftUI
-
+import GRDB
 /// A container for the application's major services and dependencies.
 ///
 /// **Responsibilities:**

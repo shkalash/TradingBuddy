@@ -21,6 +21,10 @@ final class TradingBuddyUITests: XCTestCase {
     func testAppLaunchesWithoutCrashing() {
         XCTAssertEqual(app.state, .runningForeground)
     }
+    
+    func testDumpAccessibilityTree() {
+        print(app.debugDescription)
+    }
 
     func testSidebarAndChatAreVisible() {
         // NavigationSplitView should render both columns on launch
@@ -129,9 +133,8 @@ final class TradingBuddyUITests: XCTestCase {
         input.typeText("Sidebar test entry")
         app.buttons["sendButton"].click()
 
-        // The sidebar list should contain at least one date row
-        let sidebarList = app.lists.firstMatch
-        XCTAssertTrue(sidebarList.waitForExistence(timeout: 3))
-        XCTAssertGreaterThan(sidebarList.cells.count, 0)
+        let sidebarTable = app.tables.firstMatch
+        XCTAssertTrue(sidebarTable.waitForExistence(timeout: 3))
+        XCTAssertGreaterThan(sidebarTable.cells.count, 0)
     }
 }
