@@ -32,7 +32,7 @@ struct JournalRepositoryTests {
         
         #expect(entry.text == text)
         
-        try await appDb.dbWriter.read { db in
+        try await appDb.dbReader.read { db in
             let tagsCount = try Tag.fetchCount(db)
             #expect(tagsCount == 3)
             
@@ -105,7 +105,7 @@ struct JournalRepositoryTests {
         
         try await repo.clearDatabaseOnly()
         
-        try await appDb.dbWriter.read { db in
+        try await appDb.dbReader.read { db in
             let entryCount = try JournalEntry.fetchCount(db)
             let tagCount = try Tag.fetchCount(db)
             let linkCount = try EntryTag.fetchCount(db)
@@ -136,7 +136,7 @@ struct JournalRepositoryTests {
         _ = try await repo.saveEntry(text: "Entry 1 #tag1", imagePath: nil as String?)
         _ = try await repo.saveEntry(text: "Entry 2 #tag1 #tag2", imagePath: nil as String?)
         
-        try await appDb.dbWriter.read { db in
+        try await appDb.dbReader.read { db in
             #expect(try Tag.fetchCount(db) == 2)
         }
         
@@ -145,7 +145,7 @@ struct JournalRepositoryTests {
         // Update Entry 1 to remove #tag1
         try await repo.updateEntry(id: entry1.id, newText: "Entry 1 updated", newImagePath: nil)
         
-        try await appDb.dbWriter.read { db in
+        try await appDb.dbReader.read { db in
             // #tag1 still exists because Entry 2 uses it
             #expect(try Tag.fetchOne(db, key: "#tag1") != nil)
             #expect(try Tag.fetchCount(db) == 2)
@@ -156,7 +156,7 @@ struct JournalRepositoryTests {
         // Update Entry 2 to remove both tags
         try await repo.updateEntry(id: entry2.id, newText: "Entry 2 updated", newImagePath: nil)
         
-        try await appDb.dbWriter.read { db in
+        try await appDb.dbReader.read { db in
             // Both tags should be gone now
             #expect(try Tag.fetchCount(db) == 0)
         }
@@ -188,6 +188,32 @@ struct JournalRepositoryTests {
         #expect(topTags[1].id == "#tag3")
     }
 
+    @Test("cleanupOrphanedTags removes tags with no remaining entries")
+    func testStandaloneCleanupOrphanedTags() async throws {
+        let (repo, appDb, _) = try makeSUT()
+
+        _ = try await repo.saveEntry(text: "Entry #orphan", imagePath: nil as String?)
+        let all = try await repo.entries(for: Date())
+
+        // Delete the entry directly so the tag is now orphaned
+        try await appDb.dbWriter.write { db in
+            try JournalEntry.deleteAll(db)
+            try EntryTag.deleteAll(db)
+        }
+
+        // Tag still exists in the tag table
+        let tagCountBefore = try await appDb.dbReader.read { db in try Tag.fetchCount(db) }
+        #expect(tagCountBefore == 1)
+
+        try await repo.cleanupOrphanedTags()
+
+        let tagCountAfter = try await appDb.dbReader.read { db in try Tag.fetchCount(db) }
+        #expect(tagCountAfter == 0)
+
+        // Suppress unused variable warning
+        _ = all
+    }
+
     @Test("Saving an entry with duplicate tags should succeed and aggregate them")
     func testDuplicateTagsAggregation() async throws {
         let (repo, appDb, _) = try makeSUT()
@@ -197,7 +223,7 @@ struct JournalRepositoryTests {
         
         #expect(entry.text == text)
         
-        try await appDb.dbWriter.read { db in
+        try await appDb.dbReader.read { db in
             // Should only have 3 tags in the DB: #tilt, /ES, $AAPL
             try #expect(Tag.fetchCount(db) == 3)
             
