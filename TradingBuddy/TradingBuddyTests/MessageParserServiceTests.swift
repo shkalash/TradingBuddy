@@ -5,6 +5,12 @@ import Foundation
 struct MessageParserServiceTests {
     let parser = RegexMessageParser()
 
+    @Test("Empty string returns no tags")
+    func testEmptyString() {
+        let tags = parser.extractTags(from: "")
+        #expect(tags.isEmpty)
+    }
+
     @Test("Extracts Futures tags correctly and uppercases them")
     func testFuturesExtraction() {
         let text = "Taking a long on /es and a short on /NQM4."
@@ -84,9 +90,12 @@ struct MessageParserServiceTests {
     func testTopicRegexFeatures() {
         let text = "Testing #try-this, #multi_word-tag; #tag! /ES $AAPL"
         let tags = parser.extractTags(from: text)
-        
+
         #expect(tags.contains(ParsedTag(id: "#try-this", type: .topic)))
         #expect(tags.contains(ParsedTag(id: "#multi_word-tag", type: .topic)))
+        // NOTE: The topic regex stops only at [ .,;:\n\r] — '!' is not a stop character,
+        // so "#tag!" is matched including the exclamation mark. This is a known regex
+        // limitation. If this is undesirable UX, add '!' to the stop set in AppConstants.Patterns.topic.
         #expect(tags.contains(ParsedTag(id: "#tag!", type: .topic)))
         #expect(tags.contains(ParsedTag(id: "/ES", type: .future)))
         #expect(tags.contains(ParsedTag(id: "$AAPL", type: .ticker)))
