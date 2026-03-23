@@ -64,3 +64,4 @@ fastlane/test_output
 .gemini
 GEMINI.md
 secrets.plist
+secrets.plist
