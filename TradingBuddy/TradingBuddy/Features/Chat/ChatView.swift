@@ -84,7 +84,6 @@ struct ChatView: View {
         .sheet(item: $activePendingPreviewImage) { item in pendingImagePreviewSheet(for: item.image) }
         .navigationTitle(navigationTitle)
         .searchable(text: $bindableViewModel.searchText, prompt: Text("chat.search.placeholder"))
-        .accessibilityIdentifier("chatView")
         .alert(Text("chat.alert.notice.title"), isPresented: $bindableViewModel.showAlert, presenting: viewModel.activeAlert) { alert in
             alertButtons(for: alert)
         } message: { alert in
