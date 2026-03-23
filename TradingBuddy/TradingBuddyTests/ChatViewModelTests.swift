@@ -12,10 +12,10 @@ struct ChatViewModelTests {
         let prefs = PreviewMocks.MockPreferences()
         let router = AppRouter()
 
-        let container = TestDependencyContainer(
-            preferencesService: prefs,
-            repository: repo,
+        let container = TestDependencyContainer.make(
             timeProvider: timeProvider,
+            repository: repo,
+            preferencesService: prefs,
             router: router
         )
 
