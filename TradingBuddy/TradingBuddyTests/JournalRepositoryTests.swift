@@ -225,10 +225,10 @@ struct JournalRepositoryTests {
         
         try await appDb.dbReader.read { db in
             // Should only have 3 tags in the DB: #tilt, /ES, $AAPL
-            try #expect(Tag.fetchCount(db) == 3)
+            #expect(try Tag.fetchCount(db) == 3)
             
             // Should only have 3 links in the join table
-            try #expect(EntryTag.fetchCount(db) == 3)
+            #expect(try EntryTag.fetchCount(db) == 3)
         }
     }
 }
