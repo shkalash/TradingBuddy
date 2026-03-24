@@ -32,6 +32,9 @@
 		F60CB6182F5B0D74002242FE /* TradingBuddyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TradingBuddyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F60CB6222F5B0D74002242FE /* TradingBuddyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TradingBuddyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F649FAAF2F5CD84100D318B2 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; name = README.md; path = ../README.md; sourceTree = SOURCE_ROOT; };
+		F6E310E42F7267270018C14F /* ci.yml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; name = ci.yml; path = ../.github/workflows/ci.yml; sourceTree = SOURCE_ROOT; };
+		F6E310E52F7267620018C14F /* TradingBuddyTests.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = TradingBuddyTests.xctestplan; sourceTree = "<group>"; };
+		F6E310E62F7267730018C14F /* TradingBuddyUITests.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = TradingBuddyUITests.xctestplan; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -81,6 +84,9 @@
 		F60CB6022F5B0D71002242FE = {
 			isa = PBXGroup;
 			children = (
+				F6E310E42F7267270018C14F /* ci.yml */,
+				F6E310E62F7267730018C14F /* TradingBuddyUITests.xctestplan */,
+				F6E310E52F7267620018C14F /* TradingBuddyTests.xctestplan */,
 				F649FAAF2F5CD84100D318B2 /* README.md */,
 				F649F9F72F5CB29100D318B2 /* TradingBuddy */,
 				F60CB61B2F5B0D74002242FE /* TradingBuddyTests */,

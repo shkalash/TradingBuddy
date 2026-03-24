@@ -1,0 +1,24 @@
+{
+  "configurations" : [
+    {
+      "id" : "543D019D-034F-4D42-9B96-4B88C56085A6",
+      "name" : "Configuration 1",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "testTimeoutsEnabled" : true
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:TradingBuddy.xcodeproj",
+        "identifier" : "F60CB6172F5B0D74002242FE",
+        "name" : "TradingBuddyTests"
+      }
+    }
+  ],
+  "version" : 1
+}

@@ -1,0 +1,30 @@
+{
+  "configurations" : [
+    {
+      "id" : "FF879595-4C68-4383-86B5-827E14377793",
+      "name" : "Configuration 1",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "environmentVariableEntries" : [
+      {
+        "key" : "DYLD_INSERT_LIBRARIES",
+        "value" : ""
+      }
+    ],
+    "testTimeoutsEnabled" : true
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:TradingBuddy.xcodeproj",
+        "identifier" : "F60CB6212F5B0D74002242FE",
+        "name" : "TradingBuddyUITests"
+      }
+    }
+  ],
+  "version" : 1
+}
