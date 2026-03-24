@@ -26,34 +26,33 @@ final class TradingBuddyUITests: XCTestCase {
         app.buttons["sendButton"]
     }
 
-    /// The horizontal chip row ScrollView.
     var tagChipRow: XCUIElement {
         app.scrollViews["tagChipRow"]
     }
 
-    /// All rendered message bubbles.
+    /// Message text StaticTexts — exactly one per message with text content.
     var messageBubbles: XCUIElementQuery {
-        app.otherElements.matching(NSPredicate(format: "identifier BEGINSWITH 'messageBubble-'"))
+        app.scrollViews["messageFeed"].staticTexts.matching(
+            NSPredicate(format: "identifier BEGINSWITH 'messageBubble-'")
+        )
     }
 
-    /// Types into the chat input and clicks send. Waits for the input to clear
-    /// before returning so the caller knows the save round-trip completed.
-    func sendMessage(_ text: String, waitForClear: Bool = true) {
+    /// Types into the chat input, clicks send, and waits for the input to clear
+    /// so callers know the full async save round-trip completed.
+    func sendMessage(_ text: String) {
         let tv = chatInputTextView
         XCTAssertTrue(tv.waitForExistence(timeout: 3))
         tv.click()
         tv.typeText(text)
         XCTAssertTrue(sendButton.waitForExistence(timeout: 3))
         sendButton.click()
-        if waitForClear {
-            let deadline = Date().addingTimeInterval(5)
-            while (tv.value as? String ?? "").isEmpty == false && Date() < deadline {
-                RunLoop.current.run(until: Date().addingTimeInterval(0.05))
-            }
+        let deadline = Date().addingTimeInterval(5)
+        while (tv.value as? String ?? "").isEmpty == false && Date() < deadline {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
         }
     }
 
-    /// Waits until `query.count >= target` or timeout elapses.
+    /// Polls until query.count >= target or timeout elapses.
     func waitFor(_ query: XCUIElementQuery, count target: Int, timeout: TimeInterval = 5) {
         let deadline = Date().addingTimeInterval(timeout)
         while query.count < target && Date() < deadline {
@@ -123,12 +122,9 @@ final class TradingBuddyUITests: XCTestCase {
     func testTappingTagChipInsertsIntoInput() {
         sendMessage("Seed #fomo entry")
         XCTAssertTrue(tagChipRow.waitForExistence(timeout: 5))
-
-        // Scope to tagChipRow to avoid matching the sidebar button with same label
         let chip = tagChipRow.buttons["#fomo"]
         XCTAssertTrue(chip.waitForExistence(timeout: 3))
         chip.click()
-
         let value = chatInputTextView.value as? String ?? ""
         XCTAssertTrue(value.contains("#fomo"), "Expected '#fomo' in input, got: \(value)")
     }
@@ -152,7 +148,6 @@ final class TradingBuddyUITests: XCTestCase {
         search.click()
         search.typeText("AAPL")
 
-        // Wait for filter to apply
         let deadline = Date().addingTimeInterval(3)
         while messageBubbles.count != 1 && Date() < deadline {
             RunLoop.current.run(until: Date().addingTimeInterval(0.1))
@@ -166,7 +161,11 @@ final class TradingBuddyUITests: XCTestCase {
         sendMessage("Sidebar navigation test")
         let sidebar = app.outlines["Sidebar"].firstMatch
         XCTAssertTrue(sidebar.waitForExistence(timeout: 3))
-        waitFor(sidebar.cells, count: 2, timeout: 5) // header cell + at least one day cell
+        // Wait for the day row to appear under the disclosure group
+        let deadline = Date().addingTimeInterval(5)
+        while sidebar.cells.count < 2 && Date() < deadline {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
         XCTAssertGreaterThan(sidebar.cells.count, 0)
     }
 }
