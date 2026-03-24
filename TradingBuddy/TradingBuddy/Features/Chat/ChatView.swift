@@ -231,6 +231,7 @@ struct ChatView: View {
                     .padding(.horizontal, 20)
                     .frame(height: 32)
                 }
+                .accessibilityIdentifier("tagChipRow")
                 .padding(.top, 12)
                 .mask {
                     HStack(spacing: 0) {
