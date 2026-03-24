@@ -17,25 +17,48 @@ final class TradingBuddyUITests: XCTestCase {
 
     // MARK: - Helpers
 
-    /// The actual editable TextView inside the input area.
-    /// The ScrollView got our identifier — the TextView is its direct child.
+    /// The actual editable TextView inside the input ScrollView.
     var chatInputTextView: XCUIElement {
         app.scrollViews["chatInput"].textViews.firstMatch
     }
 
-    /// Send button — identifier applied correctly, label 'Arrow Up Circle'.
     var sendButton: XCUIElement {
         app.buttons["sendButton"]
     }
 
-    /// Types text into the chat input and sends it.
-    func sendMessage(_ text: String) {
+    /// The horizontal chip row ScrollView.
+    var tagChipRow: XCUIElement {
+        app.scrollViews["tagChipRow"]
+    }
+
+    /// All rendered message bubbles.
+    var messageBubbles: XCUIElementQuery {
+        app.otherElements.matching(NSPredicate(format: "identifier BEGINSWITH 'messageBubble-'"))
+    }
+
+    /// Types into the chat input and clicks send. Waits for the input to clear
+    /// before returning so the caller knows the save round-trip completed.
+    func sendMessage(_ text: String, waitForClear: Bool = true) {
         let tv = chatInputTextView
         XCTAssertTrue(tv.waitForExistence(timeout: 3))
         tv.click()
         tv.typeText(text)
         XCTAssertTrue(sendButton.waitForExistence(timeout: 3))
         sendButton.click()
+        if waitForClear {
+            let deadline = Date().addingTimeInterval(5)
+            while (tv.value as? String ?? "").isEmpty == false && Date() < deadline {
+                RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+            }
+        }
+    }
+
+    /// Waits until `query.count >= target` or timeout elapses.
+    func waitFor(_ query: XCUIElementQuery, count target: Int, timeout: TimeInterval = 5) {
+        let deadline = Date().addingTimeInterval(timeout)
+        while query.count < target && Date() < deadline {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
     }
 
     // MARK: - Launch
@@ -46,7 +69,6 @@ final class TradingBuddyUITests: XCTestCase {
 
     func testSplitViewAndSidebarAreVisible() {
         XCTAssertTrue(app.splitGroups.firstMatch.waitForExistence(timeout: 3))
-        // Sidebar renders as Outline with label 'Sidebar'
         XCTAssertTrue(app.outlines["Sidebar"].waitForExistence(timeout: 3))
     }
 
@@ -73,47 +95,38 @@ final class TradingBuddyUITests: XCTestCase {
     // MARK: - Send message
 
     func testSendMessageClearsInput() {
-        let tv = chatInputTextView
-        XCTAssertTrue(tv.waitForExistence(timeout: 3))
-        tv.click()
-        tv.typeText("Test message")
-        sendButton.click()
-
-        // Input should clear after send — value becomes empty string
-        let deadline = Date().addingTimeInterval(3)
-        while (tv.value as? String ?? "").isEmpty == false && Date() < deadline {
-            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
-        }
-        XCTAssertEqual(tv.value as? String ?? "", "")
+        sendMessage("Test clear input")
+        XCTAssertEqual(chatInputTextView.value as? String ?? "", "")
     }
 
     func testSendMessageAppearsInFeed() {
         sendMessage("End to end test entry")
+        waitFor(messageBubbles, count: 1)
+        XCTAssertGreaterThanOrEqual(messageBubbles.count, 1)
+    }
 
-        // messageBubble-* identifiers are on Other elements inside the feed ScrollView
-        let feed = app.scrollViews["chatInput"] // feed scroll view also got chatInput — use the one that contains Others
-        // Query by identifier prefix across the whole app
-        let bubble = app.otherElements.matching(
-            NSPredicate(format: "identifier BEGINSWITH 'messageBubble-'")
-        ).firstMatch
-        XCTAssertTrue(bubble.waitForExistence(timeout: 5))
+    func testSendMultipleMessagesAllAppearInFeed() {
+        sendMessage("First entry")
+        sendMessage("Second entry")
+        waitFor(messageBubbles, count: 2)
+        XCTAssertGreaterThanOrEqual(messageBubbles.count, 2)
     }
 
     // MARK: - Tag chips
 
     func testTagChipAppearsAfterSendingTaggedMessage() {
         sendMessage("Trade note #tilt")
-
-        // Chip is a Button with title matching the tag id
-        let chip = app.buttons["#tilt"]
-        XCTAssertTrue(chip.waitForExistence(timeout: 5))
+        XCTAssertTrue(tagChipRow.waitForExistence(timeout: 5))
+        XCTAssertTrue(tagChipRow.buttons["#tilt"].waitForExistence(timeout: 3))
     }
 
     func testTappingTagChipInsertsIntoInput() {
         sendMessage("Seed #fomo entry")
+        XCTAssertTrue(tagChipRow.waitForExistence(timeout: 5))
 
-        let chip = app.buttons["#fomo"]
-        XCTAssertTrue(chip.waitForExistence(timeout: 5))
+        // Scope to tagChipRow to avoid matching the sidebar button with same label
+        let chip = tagChipRow.buttons["#fomo"]
+        XCTAssertTrue(chip.waitForExistence(timeout: 3))
         chip.click()
 
         let value = chatInputTextView.value as? String ?? ""
@@ -131,42 +144,29 @@ final class TradingBuddyUITests: XCTestCase {
     func testSearchFilterReducesFeedToMatches() {
         sendMessage("Long /ES at open")
         sendMessage("Watching $AAPL earnings")
-
-        // Wait for both bubbles
-        let bubbles = app.otherElements.matching(
-            NSPredicate(format: "identifier BEGINSWITH 'messageBubble-'")
-        )
-        let deadline = Date().addingTimeInterval(5)
-        while bubbles.count < 2 && Date() < deadline {
-            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
-        }
-        XCTAssertEqual(bubbles.count, 2)
+        waitFor(messageBubbles, count: 2)
+        XCTAssertEqual(messageBubbles.count, 2)
 
         let search = app.searchFields.firstMatch
+        XCTAssertTrue(search.waitForExistence(timeout: 3))
         search.click()
         search.typeText("AAPL")
 
-        let afterDeadline = Date().addingTimeInterval(2)
-        while bubbles.count != 1 && Date() < afterDeadline {
+        // Wait for filter to apply
+        let deadline = Date().addingTimeInterval(3)
+        while messageBubbles.count != 1 && Date() < deadline {
             RunLoop.current.run(until: Date().addingTimeInterval(0.1))
         }
-        XCTAssertEqual(bubbles.count, 1)
+        XCTAssertEqual(messageBubbles.count, 1)
     }
 
     // MARK: - Sidebar
 
     func testSidebarShowsEntryAfterSend() {
         sendMessage("Sidebar navigation test")
-
-        // After sending, the current month disclosure should expand and show a day row
         let sidebar = app.outlines["Sidebar"].firstMatch
         XCTAssertTrue(sidebar.waitForExistence(timeout: 3))
-
-        // The outline should have at least one row beyond the section header
-        let deadline = Date().addingTimeInterval(5)
-        while sidebar.cells.count < 2 && Date() < deadline {
-            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
-        }
+        waitFor(sidebar.cells, count: 2, timeout: 5) // header cell + at least one day cell
         XCTAssertGreaterThan(sidebar.cells.count, 0)
     }
 }
