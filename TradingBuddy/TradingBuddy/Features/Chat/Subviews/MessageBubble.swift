@@ -78,6 +78,7 @@ struct MessageBubble: View {
             .font(.system(size: chatFontSize))
             .textSelection(.enabled)
             .lineSpacing(4)
+            .accessibilityIdentifier("messageBubble-\(entry.id)")
     }
     
     private func imageThumbnail(path: String) -> some View {

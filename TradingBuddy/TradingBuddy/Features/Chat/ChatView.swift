@@ -136,7 +136,6 @@ struct ChatView: View {
                             dependencies: dependencies
                         )
                         .id(entry.id)
-                        .accessibilityIdentifier("messageBubble-\(entry.id)")
                         .padding(4)
                         .overlay(
                             RoundedRectangle(cornerRadius: 16)
@@ -169,6 +168,7 @@ struct ChatView: View {
             }
         }
         .background(Color(nsColor: .windowBackgroundColor).opacity(0.4))
+        .accessibilityIdentifier("messageFeed")
     }
     
     private var inputArea: some View {
