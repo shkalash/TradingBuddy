@@ -13,9 +13,9 @@ extension View {
     ///   - onSave: A closure to save the frame.
     func persistentFrame(
         forKey key: String,
-        onLoad: @escaping (String) -> CGRect?,
-        onSave: @escaping (String, CGRect) -> Void
+        onLoad: @escaping (String) -> WindowState?,
+        onSave: @escaping (String, WindowState) -> Void
     ) -> some View {
-        self.modifier(PersistentWindowFrame(key: key, onLoad: onLoad, onSave: onSave))
+        self.modifier(PersistentWindow(key: key, onLoad: onLoad, onSave: onSave))
     }
 }

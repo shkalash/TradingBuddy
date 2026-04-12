@@ -168,4 +168,57 @@ final class TradingBuddyUITests: XCTestCase {
         }
         XCTAssertGreaterThan(sidebar.cells.count, 0)
     }
+
+    // MARK: - View Modes
+
+    func testToggleRulesAndChat() {
+        // Start in Chat mode
+        XCTAssertTrue(app.scrollViews["messageFeed"].waitForExistence(timeout: 3))
+        
+        // Toggle to Rules
+        let showRulesButton = app.buttons["showRulesButton"].firstMatch
+        XCTAssertTrue(showRulesButton.waitForExistence(timeout: 3))
+        showRulesButton.click()
+        
+        // Verify Rules view is visible
+        let scrollView = app.scrollViews["rulesView"]
+        XCTAssertTrue(scrollView.waitForExistence(timeout: 3))
+        XCTAssertFalse(app.scrollViews["messageFeed"].exists)
+        
+        // Toggle back to Chat
+        let showChatButton = app.buttons["showChatButton"].firstMatch
+        XCTAssertTrue(showChatButton.waitForExistence(timeout: 3))
+        showChatButton.click()
+        
+        // Verify Chat view is visible again
+        XCTAssertTrue(app.scrollViews["messageFeed"].waitForExistence(timeout: 3))
+        XCTAssertFalse(app.otherElements["rulesView"].exists)
+    }
+    
+    func testRulesEditAndSave() {
+        // Navigate to Rules
+        let showRulesButton = app.buttons["showRulesButton"].firstMatch
+        XCTAssertTrue(showRulesButton.waitForExistence(timeout: 3))
+        showRulesButton.click()
+        
+        // Enter Edit Mode
+        let editButton = app.buttons["editRulesButton"].firstMatch
+        XCTAssertTrue(editButton.waitForExistence(timeout: 3))
+        editButton.click()
+        // Type into Editor
+        let editor = app.textViews["rulesEditor"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 3))
+        editor.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click()
+        editor.typeText("My Trading Rules\n1. Dont tilt\n2. Follow the trend")
+        
+        // Save
+        let saveButton = app.buttons["saveRulesButton"].firstMatch
+        XCTAssertTrue(saveButton.waitForExistence(timeout: 3))
+        saveButton.click()
+        // Verify Content is visible in View mode
+        let scrollView = app.scrollViews["rulesView"]
+        XCTAssertTrue(scrollView.waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["rulesContent"].waitForExistence(timeout: 3))
+        XCTAssertEqual(app.staticTexts["rulesContent"].value as? String, "My Trading Rules\n1. Dont tilt\n2. Follow the trend")
+    }
 }

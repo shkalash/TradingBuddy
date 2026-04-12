@@ -29,10 +29,10 @@ struct TradingBuddyApp: App {
                 .persistentFrame(
                     forKey: windowName,
                     onLoad: { key in
-                        dependencies.persistenceHandler.loadCodable(for: .windowState(name: key))?.frame
+                        dependencies.persistenceHandler.loadCodable(for: .windowState(name: key))
                     },
-                    onSave: { key, frame in
-                        dependencies.persistenceHandler.saveCodable(object: WindowState(frame: frame), for: .windowState(name: key))
+                    onSave: { key, state in
+                        dependencies.persistenceHandler.saveCodable(object: state, for: .windowState(name: key))
                     }
                 )
         }

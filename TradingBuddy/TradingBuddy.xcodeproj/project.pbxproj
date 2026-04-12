@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		F60CB6372F5B0E47002242FE /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = F60CB6362F5B0E47002242FE /* GRDB */; };
+		F6DAFCDF2F8AE97600F1B989 /* Textual in Frameworks */ = {isa = PBXBuildFile; productRef = F6DAFCDE2F8AE97600F1B989 /* Textual */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -60,6 +61,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F6DAFCDF2F8AE97600F1B989 /* Textual in Frameworks */,
 				F60CB6372F5B0E47002242FE /* GRDB in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -126,6 +128,7 @@
 			name = TradingBuddy;
 			packageProductDependencies = (
 				F60CB6362F5B0E47002242FE /* GRDB */,
+				F6DAFCDE2F8AE97600F1B989 /* Textual */,
 			);
 			productName = TradingBuddy;
 			productReference = F60CB60B2F5B0D71002242FE /* TradingBuddy.app */;
@@ -212,6 +215,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				F60CB6352F5B0E47002242FE /* XCRemoteSwiftPackageReference "GRDB.swift" */,
+				F6DAFCDD2F8AE97600F1B989 /* XCRemoteSwiftPackageReference "textual" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F60CB60C2F5B0D71002242FE /* Products */;
@@ -616,6 +620,14 @@
 				kind = branch;
 			};
 		};
+		F6DAFCDD2F8AE97600F1B989 /* XCRemoteSwiftPackageReference "textual" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/gonzalezreal/textual";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.3.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -623,6 +635,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = F60CB6352F5B0E47002242FE /* XCRemoteSwiftPackageReference "GRDB.swift" */;
 			productName = GRDB;
+		};
+		F6DAFCDE2F8AE97600F1B989 /* Textual */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F6DAFCDD2F8AE97600F1B989 /* XCRemoteSwiftPackageReference "textual" */;
+			productName = Textual;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

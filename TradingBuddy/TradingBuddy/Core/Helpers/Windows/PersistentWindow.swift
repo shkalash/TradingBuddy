@@ -5,18 +5,19 @@ import Combine
 /// A Codable struct to store the window's frame information.
 struct WindowState: Codable {
     let frame: CGRect
+    let isFullScreen: Bool
 }
 
 /// The ViewModifier that applies the persistent frame logic.
-struct PersistentWindowFrame: ViewModifier {
+struct PersistentWindow: ViewModifier {
     private let key: String
-    private let onLoad: (String) -> CGRect?
-    private let onSave: (String, CGRect) -> Void
+    private let onLoad: (String) -> WindowState?
+    private let onSave: (String, WindowState) -> Void
     
     // We store the notification observers in a property to keep them alive.
     @State private var observers: [AnyObject] = []
-
-    init(key: String, onLoad: @escaping (String) -> CGRect?, onSave: @escaping (String, CGRect) -> Void) {
+    @State private var savedFrame: CGRect = .zero
+    init(key: String, onLoad: @escaping (String) -> WindowState?, onSave: @escaping (String, WindowState) -> Void) {
         self.key = key
         self.onLoad = onLoad
         self.onSave = onSave
@@ -26,21 +27,35 @@ struct PersistentWindowFrame: ViewModifier {
         content
             .background(
                 WindowAccessor { window in
-                    // On first appearance, load and apply the saved frame.
-                    applySavedFrame(to: window)
-                    // Set up observers to save the frame on change.
-                    setupObservers(for: window)
+                    // Only apply if we haven't already.
+                    // This avoids recursion or repeated triggers.
+                    if observers.isEmpty {
+                        applySavedState(to: window)
+                        setupObservers(for: window)
+                    }
                 }
             )
     }
     
-    private func applySavedFrame(to window: NSWindow) {
-        if let frame = onLoad(key) {
-            window.setFrame(frame, display: true)
+    private func applySavedState(to window: NSWindow) {
+        if let state = onLoad(key) {
+            // First set the frame
+            window.setFrame(state.frame, display: true)
+            savedFrame = state.frame
+            // Then if it was full screen, toggle it.
+            // We use a small delay or async to ensure the window is ready for the transition.
+            if state.isFullScreen {
+                DispatchQueue.main.async {
+                    if !window.styleMask.contains(.fullScreen) {
+                        window.toggleFullScreen(nil)
+                    }
+                }
+            }
         } else {
             // Provide a sensible default if no state is saved.
             window.setContentSize(NSSize(width: 900, height: 600))
             window.center()
+            savedFrame = window.frame
         }
     }
     
@@ -48,8 +63,10 @@ struct PersistentWindowFrame: ViewModifier {
         // Prevent adding observers multiple times.
         guard observers.isEmpty else { return }
         
-        // Save frame on move
-        let moveObserver = NotificationCenter.default.addObserver(
+        let center = NotificationCenter.default
+        
+        // Save state on move
+        let moveObserver = center.addObserver(
             forName: NSWindow.didMoveNotification,
             object: window,
             queue: .main
@@ -57,8 +74,8 @@ struct PersistentWindowFrame: ViewModifier {
             save(window: window)
         }
         
-        // Save frame on resize
-        let resizeObserver = NotificationCenter.default.addObserver(
+        // Save state on resize
+        let resizeObserver = center.addObserver(
             forName: NSWindow.didEndLiveResizeNotification,
             object: window,
             queue: .main
@@ -66,11 +83,30 @@ struct PersistentWindowFrame: ViewModifier {
             save(window: window)
         }
         
-        self.observers = [moveObserver, resizeObserver]
+        // Save state on entering/exiting full screen
+        let enterFullScreenObserver = center.addObserver(
+            forName: NSWindow.didEnterFullScreenNotification,
+            object: window,
+            queue: .main
+        ) { _ in
+            save(window: window)
+        }
+        
+        let exitFullScreenObserver = center.addObserver(
+            forName: NSWindow.didExitFullScreenNotification,
+            object: window,
+            queue: .main
+        ) { _ in
+            save(window: window)
+        }
+        
+        self.observers = [moveObserver, resizeObserver, enterFullScreenObserver, exitFullScreenObserver]
     }
     
     private func save(window: NSWindow) {
-        onSave(key, window.frame)
+        let isFullScreen = window.styleMask.contains(.fullScreen)
+        if !isFullScreen { savedFrame = window.frame }
+        onSave(key, WindowState(frame: savedFrame, isFullScreen: isFullScreen))
     }
 }
 
