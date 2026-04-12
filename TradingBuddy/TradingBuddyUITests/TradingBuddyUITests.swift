@@ -186,7 +186,7 @@ final class TradingBuddyUITests: XCTestCase {
         XCTAssertFalse(app.scrollViews["messageFeed"].exists)
         
         // Toggle back to Chat
-        let showChatButton = app.buttons["showChatButton"]
+        let showChatButton = app.buttons["showChatButton"].firstMatch
         XCTAssertTrue(showChatButton.waitForExistence(timeout: 3))
         showChatButton.click()
         
@@ -202,7 +202,7 @@ final class TradingBuddyUITests: XCTestCase {
         showRulesButton.click()
         
         // Enter Edit Mode
-        let editButton = app.buttons["editRulesButton"]
+        let editButton = app.buttons["editRulesButton"].firstMatch
         XCTAssertTrue(editButton.waitForExistence(timeout: 3))
         editButton.click()
         // Type into Editor
