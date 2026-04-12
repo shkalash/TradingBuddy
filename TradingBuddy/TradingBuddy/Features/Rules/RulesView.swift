@@ -81,6 +81,8 @@ struct RulesView: View {
     // MARK: - Helpers
     
     private func loadRules() {
+        guard !ProcessInfo.processInfo.arguments.contains("-UITesting")
+            else { rulesContent = "" ; return }
         rulesContent = dependencies.persistenceHandler.load(for: .rulesContent) ?? ""
     }
     
