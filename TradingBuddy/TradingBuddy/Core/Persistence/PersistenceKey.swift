@@ -27,6 +27,9 @@ extension PersistenceKey {
     // Colors
     static var tagCategoryColors: PersistenceKey<[String: String]> { .init(name: AppConstants.Storage.tagCategoryColorsKey) }
     
+    // Rules
+    static var rulesContent: PersistenceKey<String> { .init(name: "rules_content") }
+    
     // Window State
     static func windowState(name: String) -> PersistenceKey<WindowState> {
         .init(name: "\(AppConstants.Storage.windowStatekey)_\(name)")

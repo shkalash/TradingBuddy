@@ -17,10 +17,30 @@ struct ContentView: View {
     // MARK: - Body
     
     var body: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
-            SidebarView(dependencies: dependencies)
-        } detail: {
-            ChatView(dependencies: dependencies)
+        Group {
+            switch dependencies.router.viewMode {
+            case .chat:
+                NavigationSplitView(columnVisibility: $columnVisibility) {
+                    SidebarView(dependencies: dependencies)
+                } detail: {
+                    ChatView(dependencies: dependencies)
+                        .toolbar {
+                            ToolbarItem(placement: .navigation) {
+                                Button(action: {
+                                    dependencies.router.viewMode = .rules
+                                }) {
+                                    Label(String(localized: "chat.toolbar.show_rules", defaultValue: "Show Rules"), systemImage: "doc.text")
+                                }
+                                .help(String(localized: "chat.toolbar.show_rules.help", defaultValue: "Show Rules"))
+                                .accessibilityIdentifier("showRulesButton")
+                            }
+                        }
+                }
+            case .rules:
+                NavigationStack {
+                    RulesView(dependencies: dependencies)
+                }
+            }
         }
         .task {
             // Initial load

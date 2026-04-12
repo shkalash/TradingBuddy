@@ -9,13 +9,29 @@ import Observation
 /// - Facilitating deep linking and navigation state restoration.
 @Observable
 public final class AppRouter {
+    // MARK: - Types
+    
+    public enum AppViewMode: Hashable {
+        case chat
+        case rules
+    }
+    
+    public enum RulesMode: Hashable {
+        case view
+        case edit
+    }
+    
     // MARK: - Properties
     
     public var selection: NavigationSelection?
+    public var viewMode: AppViewMode = .chat
+    public var rulesMode: RulesMode = .view
     
     // MARK: - Initialization
     
-    public init(selection: NavigationSelection? = nil) {
+    public init(selection: NavigationSelection? = nil, viewMode: AppViewMode = .chat, rulesMode: RulesMode = .view) {
         self.selection = selection
+        self.viewMode = viewMode
+        self.rulesMode = rulesMode
     }
 }
