@@ -212,7 +212,7 @@ final class TradingBuddyUITests: XCTestCase {
         editor.typeText("My Trading Rules\n1. Dont tilt\n2. Follow the trend")
         
         // Save
-        let saveButton = app.buttons["saveRulesButton"]
+        let saveButton = app.buttons["saveRulesButton"].firstMatch
         XCTAssertTrue(saveButton.waitForExistence(timeout: 3))
         saveButton.click()
         // Verify Content is visible in View mode
