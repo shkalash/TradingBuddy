@@ -16,16 +16,12 @@ Traders often need to capture quick thoughts without the friction of complex for
 - **Tag Suggestion Chips:** A horizontally scrolling list of the 20 most-referenced topic tags displayed above the input field for instant insertion into your draft.
 - **Session-Aware Logic:** Specialized calculation for the Chicago/CME trading day, handling the 5:00 PM CT (6:00 PM ET) rollover and weekend gaps.
 - **Visual Evidence:** Support for pasting images directly into the feed to capture charts or order fills.
-- **Reliable Message Editing:** A dedicated editing interface for modifying existing entries, ensuring text is correctly populated and synchronized.
 - **Deep Contextual Search:** Powerful filtering by tag or keyword with a "Jump to Context" feature that instantly scrolls to a message's chronological position.
 - **Organized Sidebar Navigation:**
     - **History Tree:** Navigation organized by Year and Month for easy review of past sessions.
     - **Alphanumeric Tag Sorting:** Tags are automatically sorted alphabetically (A-Z) for consistent organization.
     - **Automatic Cleanup:** Orphaned tags with no remaining messages are automatically removed to keep the interface focused.
-- **Robust Infrastructure:**
-    - **Startup Migrations:** A versioned system for performing one-shot database updates and data maintenance at launch.
-    - **Isolated Persistence:** Separate storage environments for Production, Debug, and Testing to ensure data integrity during development.
-    - **Fully Localized:** Built from the ground up using modern String Catalogs for multi-language support.
+- **Dedicated Trading Rules View:** Provides a dedicted central no distraction view to keep the most important rules front and center
 
 ## Architecture
 
