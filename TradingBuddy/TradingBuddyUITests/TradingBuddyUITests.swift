@@ -176,7 +176,7 @@ final class TradingBuddyUITests: XCTestCase {
         XCTAssertTrue(app.scrollViews["messageFeed"].waitForExistence(timeout: 3))
         
         // Toggle to Rules
-        let showRulesButton = app.buttons["showRulesButton"]
+        let showRulesButton = app.buttons["showRulesButton"].firstMatch
         XCTAssertTrue(showRulesButton.waitForExistence(timeout: 3))
         showRulesButton.click()
         
@@ -197,7 +197,7 @@ final class TradingBuddyUITests: XCTestCase {
     
     func testRulesEditAndSave() {
         // Navigate to Rules
-        let showRulesButton = app.buttons["showRulesButton"]
+        let showRulesButton = app.buttons["showRulesButton"].firstMatch
         XCTAssertTrue(showRulesButton.waitForExistence(timeout: 3))
         showRulesButton.click()
         
